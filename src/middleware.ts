@@ -9,7 +9,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname.startsWith('/uploads') ||
-    pathname.startsWith('/sample_contacts.csv') ||
+    pathname.endsWith('.csv') ||
     pathname === '/favicon.ico'
   ) {
     return NextResponse.next();
