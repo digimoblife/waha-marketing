@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizePhone, phoneToJid } from '@/lib/phone';
+import { formatAccountDate } from '@/lib/date';
 import { waha } from '@/lib/waha';
 import * as XLSX from 'xlsx';
 
@@ -99,16 +100,24 @@ export async function POST(req: NextRequest) {
       ).trim();
 
       // 6. Account Creation Date (Tanggal Pembuatan Akun)
-      const accountCreatedAt = String(
-        row['Tanggal pembuatan akun'] ||
-        row['Tanggal Pembuatan Akun'] ||
-        row['Tanggal Akun'] ||
-        row['tanggal_akun'] ||
-        row['Tgl Akun'] ||
-        row['Registered At'] ||
-        row['Created At'] ||
-        ''
-      ).trim();
+      const rawAccountCreatedAt =
+        row['Tanggal pembuatan akun'] !== undefined
+          ? row['Tanggal pembuatan akun']
+          : row['Tanggal Pembuatan Akun'] !== undefined
+          ? row['Tanggal Pembuatan Akun']
+          : row['Tanggal Akun'] !== undefined
+          ? row['Tanggal Akun']
+          : row['tanggal_akun'] !== undefined
+          ? row['tanggal_akun']
+          : row['Tgl Akun'] !== undefined
+          ? row['Tgl Akun']
+          : row['Registered At'] !== undefined
+          ? row['Registered At']
+          : row['Created At'] !== undefined
+          ? row['Created At']
+          : '';
+
+      const accountCreatedAt = formatAccountDate(rawAccountCreatedAt);
 
       // 7. Address (Alamat)
       const address = String(

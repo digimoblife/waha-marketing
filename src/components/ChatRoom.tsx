@@ -33,6 +33,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { formatDisplayPhone, isLid } from '@/lib/phone';
+import { formatAccountDate } from '@/lib/date';
 
 interface ChatRoomProps {
   chatId: string;
@@ -414,7 +415,7 @@ export default function ChatRoom({
             {chatData.contact.accountCreatedAt && (
               <span className="flex items-center gap-1 text-slate-500">
                 <Calendar className="w-3 h-3 text-slate-400" />
-                <span>Daftar: {chatData.contact.accountCreatedAt}</span>
+                <span>Daftar: {formatAccountDate(chatData.contact.accountCreatedAt)}</span>
               </span>
             )}
           </div>

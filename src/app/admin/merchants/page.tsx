@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
+import { formatAccountDate } from '@/lib/date';
 
 export default function AdminMerchantsPage() {
   const [contacts, setContacts] = useState<any[]>([]);
@@ -427,7 +428,7 @@ export default function AdminMerchantsPage() {
                         {c.accountCreatedAt ? (
                           <span className="flex items-center gap-1 text-slate-700">
                             <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span>{c.accountCreatedAt}</span>
+                            <span>{formatAccountDate(c.accountCreatedAt)}</span>
                           </span>
                         ) : (
                           <span className="text-slate-400 text-[11px] italic">-</span>
