@@ -4,6 +4,9 @@ import { sanitizePhone, isLid } from '@/lib/phone';
 import { resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
 
+// In-memory cache of recently received message IDs to eliminate concurrent duplicate webhooks (0ms latency check)
+const processedMsgIds = new Set<string>();
+
 /**
  * WAHA Webhook Handler
  * Receives events from WAHA container:
@@ -30,6 +33,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, ignored: 'no_id' });
       }
 
+      // Fast in-memory deduplication: if this msgId is already being processed, discard immediately
+      if (processedMsgIds.has(msgId)) {
+        console.log(`[Webhook] Concurrent duplicate ignored in-memory for msgId: ${msgId}`);
+        return NextResponse.json({ ok: true, ignored: 'duplicate_in_memory' });
+      }
+      processedMsgIds.add(msgId);
+      setTimeout(() => processedMsgIds.delete(msgId), 60000);
+
       const fromMe = Boolean(data.fromMe);
       const rawChatId =
         (fromMe
@@ -41,10 +52,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, ignored: 'no_chat_id' });
       }
 
-      // Check if message is already stored (DEDUPLICATION to prevent duplicate unreadCount increments)
+      // Database check: if message already exists, do not process again
       const existingMsg = await prisma.message.findUnique({
         where: { id: msgId },
       });
+      if (existingMsg) {
+        return NextResponse.json({ ok: true, ignored: 'already_exists_in_db' });
+      }
 
       // Check if this rawChatId is a LID that can be resolved to phone via Baileys reverse mapping
       let resolvedPhone: string | null = null;
@@ -197,12 +211,7 @@ export async function POST(req: NextRequest) {
         else lastMsgSnippet = fileName ? `📄 ${fileName}` : '📄 Dokumen';
       }
 
-      // ONLY increment unreadCount if this is a BRAND NEW INCOMING message!
-      // Outgoing messages (fromMe) reset unreadCount to 0.
-      // If message ID was already processed, DO NOT increment unreadCount again.
-      const isNewIncoming = !fromMe && !existingMsg;
-
-      // Upsert Chat
+      // Step 1: Ensure Chat record exists first (so foreign key on Message is valid)
       await prisma.chat.upsert({
         where: { id: chatId },
         create: {
@@ -211,48 +220,55 @@ export async function POST(req: NextRequest) {
           isGroup: chatId.endsWith('@g.us'),
           lastMessage: lastMsgSnippet,
           lastMessageAt: timestamp,
-          unreadCount: isNewIncoming ? 1 : 0,
+          unreadCount: 0,
           contactId: mappedContact?.id || null,
         },
         update: {
           name: mappedContact?.name || mappedContact?.pushName || undefined,
-          lastMessage: lastMsgSnippet,
-          lastMessageAt: timestamp,
-          unreadCount: fromMe
-            ? 0
-            : (isNewIncoming ? { increment: 1 } : undefined),
           contactId: mappedContact?.id || undefined,
         },
       });
 
-      // Insert Message (skip or update if already exists)
-      await prisma.message.upsert({
-        where: { id: msgId },
-        create: {
-          id: msgId,
-          chatId,
-          contactId: mappedContact?.id || null,
-          fromMe,
-          body: text,
-          mediaType,
-          mediaUrl,
-          fileName,
-          ackStatus: fromMe ? 1 : 0,
-          quotedMsgId,
-          quotedBody,
-          quotedSender,
-          timestamp,
-        },
-        update: {
-          body: text,
-          mediaUrl: mediaUrl || undefined,
-          mediaType,
-          quotedBody: quotedBody || undefined,
-          quotedSender: quotedSender || undefined,
+      // Step 2: ATOMIC INSERT of Message.
+      // If another concurrent request already created this message, Prisma throws unique constraint P2002.
+      // Only the ONE request that successfully creates the message will increment unreadCount!
+      try {
+        await prisma.message.create({
+          data: {
+            id: msgId,
+            chatId,
+            contactId: mappedContact?.id || null,
+            fromMe,
+            body: text,
+            mediaType,
+            mediaUrl,
+            fileName,
+            ackStatus: fromMe ? 1 : 0,
+            quotedMsgId,
+            quotedBody,
+            quotedSender,
+            timestamp,
+          },
+        });
+      } catch (err: any) {
+        if (err.code === 'P2002') {
+          console.log(`[Webhook] Atomic duplicate prevented by DB unique constraint for msgId: ${msgId}`);
+          return NextResponse.json({ ok: true, ignored: 'db_unique_collision' });
+        }
+        throw err;
+      }
+
+      // Step 3: Now update Chat lastMessage, lastMessageAt, and increment unreadCount exactly +1 for incoming
+      await prisma.chat.update({
+        where: { id: chatId },
+        data: {
+          lastMessage: lastMsgSnippet,
+          lastMessageAt: timestamp,
+          unreadCount: fromMe ? 0 : { increment: 1 },
         },
       });
 
-      if (isNewIncoming) {
+      if (!fromMe) {
         await createLog(
           'MESSAGE_RECEIVED',
           'SUCCESS',
@@ -261,7 +277,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      return NextResponse.json({ ok: true, processed: 'message', routedTo: chatId, isNewIncoming });
+      return NextResponse.json({ ok: true, processed: 'message', routedTo: chatId, isNewIncoming: !fromMe });
     }
 
     // 2. Handle Message Delivery / Read Receipt (ACK)
