@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+waha_sessions
+public/uploads/*
+!public/uploads/.gitkeep
+.env
+.env.local
+.DS_Store
+*.log

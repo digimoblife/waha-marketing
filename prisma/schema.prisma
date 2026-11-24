@@ -1,0 +1,92 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Contact {
+  id            String    @id @default(cuid())
+  phone         String    @unique
+  jid           String    @unique
+  lid           String?   @unique
+  name          String?
+  pushName      String?
+  profilePicUrl String?
+  isWAUser      Boolean   @default(true)
+  tags          String?   // comma-separated tags e.g. "Customer,Lead"
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  chats         Chat[]
+  messages      Message[]
+
+  @@index([phone])
+  @@index([lid])
+}
+
+model Chat {
+  id            String    @id // jid e.g. "628123456789@c.us" or "...@lid"
+  name          String?
+  isGroup       Boolean   @default(false)
+  unreadCount   Int       @default(0)
+  lastMessage   String?
+  lastMessageAt DateTime?
+  contactId     String?
+  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages      Message[]
+
+  @@index([lastMessageAt])
+  @@index([updatedAt])
+}
+
+model Message {
+  id           String   @id // WA message id
+  chatId       String
+  chat         Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  contactId    String?
+  contact      Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  fromMe       Boolean  @default(false)
+  body         String?
+  mediaType    String?  // "text" | "image" | "document" | "audio" | "video"
+  mediaUrl     String?
+  fileName     String?
+  ackStatus    Int      @default(0) // 0: Pending, 1: Sent, 2: Delivered, 3: Read
+  quotedMsgId  String?
+  quotedBody   String?  // Snippet of quoted message
+  quotedSender String?  // Sender name of quoted message (e.g. "Anda" or "Rizky")
+  timestamp    DateTime @default(now())
+
+  @@index([chatId, timestamp])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   @default("ADMIN") // "ADMIN" or "OPERATOR"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  type      String   // "MESSAGE_SENT" | "MESSAGE_RECEIVED" | "MEDIA_UPLOAD" | "SESSION_CHANGE" | "AUTH" | "ERROR"
+  status    String   // "SUCCESS" | "ERROR" | "WARNING"
+  message   String
+  details   String?
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([type])
+}
