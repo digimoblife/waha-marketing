@@ -15,6 +15,7 @@ import {
   X,
   ChevronRight,
   ExternalLink,
+  Store,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       href: '/admin',
       icon: LayoutDashboard,
       active: pathname === '/admin',
+    },
+    {
+      name: 'Database Merchant',
+      href: '/admin/merchants',
+      icon: Store,
+      active: pathname === '/admin/merchants',
     },
     {
       name: 'Log Sukses & Error',
@@ -188,6 +195,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="text-slate-900 font-semibold">
                 {pathname === '/admin'
                   ? 'Penggunaan WAHA'
+                  : pathname === '/admin/merchants'
+                  ? 'Database Merchant Lapaq'
                   : pathname === '/admin/logs'
                   ? 'Log Sukses & Error'
                   : 'User Management'}

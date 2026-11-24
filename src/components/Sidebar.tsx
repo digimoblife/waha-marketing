@@ -16,6 +16,9 @@ import {
   User,
   Trash2,
   Loader2,
+  Store,
+  MapPin,
+  Tag,
 } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
 
@@ -89,8 +92,20 @@ export default function Sidebar({
     const name = (c.name || '').toLowerCase();
     const phone = (c.phone || '').toLowerCase();
     const tags = (c.tags || '').toLowerCase();
+    const storeName = (c.storeName || '').toLowerCase();
+    const category = (c.businessCategory || '').toLowerCase();
+    const address = (c.address || '').toLowerCase();
+    const email = (c.email || '').toLowerCase();
     const q = searchQuery.toLowerCase();
-    return name.includes(q) || phone.includes(q) || tags.includes(q);
+    return (
+      name.includes(q) ||
+      phone.includes(q) ||
+      tags.includes(q) ||
+      storeName.includes(q) ||
+      category.includes(q) ||
+      address.includes(q) ||
+      email.includes(q)
+    );
   });
 
   const formatChatTime = (dateStr?: string) => {
@@ -282,16 +297,16 @@ export default function Sidebar({
             </div>
           ) : (
             filteredContacts.map((c) => {
-              const displayName = c.name || c.phone;
+              const displayName = c.name || c.storeName || c.phone;
               const formattedPhone = formatDisplayPhone(c.phone);
 
               return (
                 <div
                   key={c.id}
                   onClick={() => onSelectChat(c.jid)}
-                  className="group px-3 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition relative"
+                  className="group px-3 py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-50 transition relative"
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#128C7E]/10 text-[#075E54] shrink-0 flex items-center justify-center font-bold text-sm">
+                  <div className="w-10 h-10 rounded-full bg-[#128C7E]/10 text-[#075E54] shrink-0 flex items-center justify-center font-bold text-sm mt-0.5">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
 
@@ -299,20 +314,45 @@ export default function Sidebar({
                     <div className="flex items-center justify-between mb-0.5">
                       <h4 className="text-sm font-semibold text-gray-900 truncate">{displayName}</h4>
                       {c.isWAUser ? (
-                        <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
+                        <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">
                           WA Aktif
                         </span>
                       ) : (
-                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full shrink-0">
                           Unverified
                         </span>
                       )}
                     </div>
 
+                    {/* Merchant Store & Category Badges */}
+                    {(c.storeName || c.businessCategory) && (
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        {c.storeName && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-900 bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 rounded">
+                            <Store className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span className="truncate max-w-[130px]">{c.storeName}</span>
+                          </span>
+                        )}
+                        {c.businessCategory && (
+                          <span className="text-[10px] font-medium bg-purple-50 text-purple-700 border border-purple-200/60 px-1.5 py-0.5 rounded truncate max-w-[100px]">
+                            {c.businessCategory}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between text-xs text-gray-500">
-                      <p className="truncate">{formattedPhone}</p>
+                      <p className="truncate flex items-center gap-1">
+                        <span>{formattedPhone}</span>
+                        {c.address && (
+                          <span className="text-gray-400 text-[10px] truncate max-w-[100px] flex items-center gap-0.5">
+                            • <MapPin className="w-2.5 h-2.5 shrink-0" />
+                            {c.address}
+                          </span>
+                        )}
+                      </p>
                       {c.tags && (
-                        <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded truncate max-w-[100px]">
+                        <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded truncate max-w-[90px] shrink-0">
                           {c.tags}
                         </span>
                       )}

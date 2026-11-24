@@ -73,8 +73,18 @@ export default function Home() {
       const data = await res.json();
       if (data.contacts) {
         setContacts((prev) => {
-          const prevKey = prev.map((c) => `${c.id}-${c.name}-${c.phone}-${c.tags}`).join('|');
-          const nextKey = data.contacts.map((c: any) => `${c.id}-${c.name}-${c.phone}-${c.tags}`).join('|');
+          const prevKey = prev
+            .map(
+              (c) =>
+                `${c.id}-${c.name}-${c.phone}-${c.tags}-${c.storeName}-${c.businessCategory}`
+            )
+            .join('|');
+          const nextKey = data.contacts
+            .map(
+              (c: any) =>
+                `${c.id}-${c.name}-${c.phone}-${c.tags}-${c.storeName}-${c.businessCategory}`
+            )
+            .join('|');
           return prevKey === nextKey ? prev : data.contacts;
         });
       }
@@ -136,8 +146,7 @@ export default function Home() {
     return () => clearInterval(msgInterval);
   }, [selectedChatId, fetchMessages]);
 
-  const handleSelectChat = async (chatId: string) => {
-    if (chatId === selectedChatId) return;
+  const handleSelectChat = useCallback(async (chatId: string) => {
     setSelectedChatId(chatId);
     setMessages([]); // clear previous chat immediately
     setActiveTab('chats');
@@ -153,7 +162,23 @@ export default function Home() {
     } catch (err) {
       console.error('Select chat error:', err);
     }
-  };
+  }, [fetchChats, fetchMessages]);
+
+  // Support direct URL query parameter ?phone=xxx or ?jid=xxx (e.g. from Admin Merchant database)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const phoneParam = params.get('phone');
+      const jidParam = params.get('jid');
+      if (phoneParam) {
+        const clean = phoneParam.replace(/[^0-9]/g, '');
+        const targetJid = clean.endsWith('@c.us') ? clean : `${clean}@c.us`;
+        handleSelectChat(targetJid);
+      } else if (jidParam) {
+        handleSelectChat(jidParam);
+      }
+    }
+  }, [handleSelectChat]);
 
   const handleSendMessage = async (payload: {
     text?: string;

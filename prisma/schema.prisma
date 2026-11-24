@@ -18,6 +18,11 @@ model Contact {
   isWAUser      Boolean   @default(true)
   tags          String?   // comma-separated tags e.g. "Customer,Lead"
   notes         String?
+  storeName     String?   // Nama Toko
+  businessCategory String? // Kategori Bisnis (e.g. Kuliner, Fashion)
+  email         String?   // Email Merchant
+  accountCreatedAt String? // Tanggal Pembuatan Akun di Lapaq
+  address       String?   // Alamat Toko / Kota
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -26,6 +31,8 @@ model Contact {
 
   @@index([phone])
   @@index([lid])
+  @@index([storeName])
+  @@index([businessCategory])
 }
 
 model Chat {

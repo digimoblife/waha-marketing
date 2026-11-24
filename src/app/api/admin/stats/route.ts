@@ -14,6 +14,7 @@ export async function GET() {
       totalContacts,
       totalChats,
       totalUsers,
+      totalMerchants,
       recentLogs,
       successCount,
       errorCount,
@@ -25,6 +26,14 @@ export async function GET() {
       prisma.contact.count(),
       prisma.chat.count(),
       prisma.user.count(),
+      prisma.contact.count({
+        where: {
+          OR: [
+            { storeName: { not: null } },
+            { businessCategory: { not: null } },
+          ],
+        },
+      }),
       prisma.log.findMany({
         take: 8,
         orderBy: { createdAt: 'desc' },
@@ -49,6 +58,7 @@ export async function GET() {
         totalContacts,
         totalChats,
         totalUsers,
+        totalMerchants,
         successCount,
         errorCount,
       },

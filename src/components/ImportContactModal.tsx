@@ -66,6 +66,15 @@ export default function ImportContactModal({
     }
   };
 
+  const downloadMerchantCSV = () => {
+    const link = document.createElement('a');
+    link.href = '/sample_merchant_lapaq.csv';
+    link.download = 'sample_merchant_lapaq.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const downloadSampleCSV = () => {
     const csvContent =
       'data:text/csv;charset=utf-8,' +
@@ -109,20 +118,38 @@ export default function ImportContactModal({
             </div>
           )}
 
-          {/* Download template hint */}
-          <div className="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-100">
-            <div className="text-xs text-blue-900">
-              <p className="font-semibold">Format kolom file yang didukung:</p>
-              <p className="text-blue-700">Nama, Nomor HP, Kategori, Catatan</p>
+          {/* Download template hints for Merchant Lapaq & Standard */}
+          <div className="bg-gradient-to-r from-amber-50/90 to-blue-50/90 p-3.5 rounded-xl border border-amber-200/80 space-y-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-xs">
+                <span className="font-bold text-amber-950 block">
+                  Format Kolom Data Merchant Lapaq:
+                </span>
+                <p className="text-amber-900/80 mt-0.5 leading-relaxed text-[11px]">
+                  1. Nama Pemilik • 2. Nama Toko • 3. Kategori Bisnis • 4. Nomor Telepon/HP • 5. Email • 6. Tanggal pembuatan akun • 7. Alamat
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={downloadMerchantCSV}
+                className="shrink-0 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                title="Unduh Template CSV Merchant Lapaq"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Template Merchant (.csv)
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={downloadSampleCSV}
-              className="text-xs bg-white text-blue-700 border border-blue-200 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg flex items-center gap-1 font-medium transition"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Template CSV
-            </button>
+
+            <div className="flex items-center justify-between pt-2 border-t border-amber-200/60 text-[11px] text-slate-500">
+              <span>Mendukung juga format standar: Nama, Nomor HP, Kategori, Catatan</span>
+              <button
+                type="button"
+                onClick={downloadSampleCSV}
+                className="text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer"
+              >
+                Format Biasa
+              </button>
+            </div>
           </div>
 
           {/* File Picker / Drag area */}

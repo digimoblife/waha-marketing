@@ -36,39 +36,96 @@ export async function POST(req: NextRequest) {
     };
 
     for (const row of rows) {
-      // Look for phone column with multiple common headers
+      // 1. Phone / WhatsApp Number
       const rawPhone = String(
+        row['Nomor Telepon/HP'] ||
+        row['Nomor Telepon'] ||
         row['Nomor HP'] ||
         row['nomor_hp'] ||
-        row['Nomor'] ||
-        row['nomor'] ||
-        row['Phone'] ||
-        row['phone'] ||
-        row['WhatsApp'] ||
-        row['whatsapp'] ||
         row['No HP'] ||
         row['no_hp'] ||
         row['Telepon'] ||
         row['telepon'] ||
+        row['Phone'] ||
+        row['phone'] ||
+        row['WhatsApp'] ||
+        row['whatsapp'] ||
+        row['Nomor'] ||
+        row['nomor'] ||
         ''
       ).trim();
 
+      // 2. Owner Name (Nama Pemilik)
       const name = String(
+        row['Nama Pemilik'] ||
+        row['nama_pemilik'] ||
+        row['Pemilik'] ||
+        row['Owner'] ||
         row['Nama'] ||
         row['nama'] ||
         row['Name'] ||
         row['name'] ||
-        row['Contact Name'] ||
+        ''
+      ).trim();
+
+      // 3. Store Name (Nama Toko)
+      const storeName = String(
+        row['Nama Toko'] ||
+        row['nama_toko'] ||
+        row['Toko'] ||
+        row['toko'] ||
+        row['Store Name'] ||
+        row['Store'] ||
+        row['Merchant'] ||
+        ''
+      ).trim();
+
+      // 4. Business Category (Kategori Bisnis)
+      const businessCategory = String(
+        row['Kategori Bisnis'] ||
+        row['kategori_bisnis'] ||
+        row['Kategori'] ||
+        row['kategori'] ||
+        row['Category'] ||
+        ''
+      ).trim();
+
+      // 5. Email
+      const email = String(
+        row['Email'] ||
+        row['email'] ||
+        row['E-mail'] ||
+        ''
+      ).trim();
+
+      // 6. Account Creation Date (Tanggal Pembuatan Akun)
+      const accountCreatedAt = String(
+        row['Tanggal pembuatan akun'] ||
+        row['Tanggal Pembuatan Akun'] ||
+        row['Tanggal Akun'] ||
+        row['tanggal_akun'] ||
+        row['Tgl Akun'] ||
+        row['Registered At'] ||
+        row['Created At'] ||
+        ''
+      ).trim();
+
+      // 7. Address (Alamat)
+      const address = String(
+        row['Alamat'] ||
+        row['alamat'] ||
+        row['Address'] ||
+        row['address'] ||
+        row['Kota'] ||
+        row['City'] ||
         ''
       ).trim();
 
       const rowTag = String(
         row['Tag'] ||
         row['tag'] ||
-        row['Kategori'] ||
-        row['kategori'] ||
         defaultTag ||
-        ''
+        (businessCategory ? `Merchant, ${businessCategory}` : 'Merchant Lapaq')
       ).trim();
 
       const notes = String(
@@ -95,7 +152,6 @@ export async function POST(req: NextRequest) {
         const check = await waha.checkNumberExists(phone);
         isWAUser = check.exists;
       } catch {
-        // If WAHA is not reachable, assume true so data is not lost
         isWAUser = true;
       }
 
@@ -106,13 +162,23 @@ export async function POST(req: NextRequest) {
         create: {
           phone,
           jid,
-          name: name || phone,
+          name: name || storeName || phone,
+          storeName: storeName || null,
+          businessCategory: businessCategory || null,
+          email: email || null,
+          accountCreatedAt: accountCreatedAt || null,
+          address: address || null,
           isWAUser,
           tags: rowTag || null,
           notes: notes || null,
         },
         update: {
           name: name || undefined,
+          storeName: storeName || undefined,
+          businessCategory: businessCategory || undefined,
+          email: email || undefined,
+          accountCreatedAt: accountCreatedAt || undefined,
+          address: address || undefined,
           tags: rowTag || undefined,
           notes: notes || undefined,
           isWAUser,
@@ -122,6 +188,8 @@ export async function POST(req: NextRequest) {
       results.success++;
       results.contacts.push({
         name: saved.name,
+        storeName: saved.storeName,
+        businessCategory: saved.businessCategory,
         phone: saved.phone,
         isWAUser: saved.isWAUser,
       });

@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('q') || '';
     const tag = searchParams.get('tag') || '';
+    const category = searchParams.get('category') || '';
+    const isMerchant = searchParams.get('isMerchant') === 'true';
 
     const where: any = {};
     if (search) {
@@ -19,16 +21,26 @@ export async function GET(req: NextRequest) {
         { name: { contains: search } },
         { phone: { contains: search } },
         { pushName: { contains: search } },
+        { storeName: { contains: search } },
+        { businessCategory: { contains: search } },
+        { address: { contains: search } },
+        { email: { contains: search } },
       ];
     }
     if (tag) {
       where.tags = { contains: tag };
     }
+    if (category) {
+      where.businessCategory = { contains: category };
+    }
+    if (isMerchant) {
+      where.storeName = { not: null };
+    }
 
     const contacts = await prisma.contact.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
-      take: 100,
+      take: 200,
     });
 
     return NextResponse.json({ contacts });
@@ -73,7 +85,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Manual single contact creation
-    const { name, phone: rawPhone, tags, notes } = body;
+    const {
+      name,
+      phone: rawPhone,
+      tags,
+      notes,
+      storeName,
+      businessCategory,
+      email,
+      accountCreatedAt,
+      address,
+    } = body;
     const phone = sanitizePhone(rawPhone);
     if (!phone) {
       return NextResponse.json({ error: 'Nomor telepon tidak valid' }, { status: 400 });
@@ -89,13 +111,23 @@ export async function POST(req: NextRequest) {
       create: {
         phone,
         jid,
-        name: name || phone,
+        name: name || storeName || phone,
+        storeName: storeName || null,
+        businessCategory: businessCategory || null,
+        email: email || null,
+        accountCreatedAt: accountCreatedAt || null,
+        address: address || null,
         isWAUser: check.exists,
         tags: tags || null,
         notes: notes || null,
       },
       update: {
         name: name || undefined,
+        storeName: storeName || undefined,
+        businessCategory: businessCategory || undefined,
+        email: email || undefined,
+        accountCreatedAt: accountCreatedAt || undefined,
+        address: address || undefined,
         tags: tags || undefined,
         notes: notes || undefined,
         isWAUser: check.exists,
@@ -108,11 +140,21 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH update contact name / tags
+// PATCH update contact name / tags / merchant details
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { jid, name, tags, notes } = body;
+    const {
+      jid,
+      name,
+      tags,
+      notes,
+      storeName,
+      businessCategory,
+      email,
+      accountCreatedAt,
+      address,
+    } = body;
 
     if (!jid) {
       return NextResponse.json({ error: 'jid is required' }, { status: 400 });
@@ -124,6 +166,11 @@ export async function PATCH(req: NextRequest) {
         name: name !== undefined ? name : undefined,
         tags: tags !== undefined ? tags : undefined,
         notes: notes !== undefined ? notes : undefined,
+        storeName: storeName !== undefined ? storeName : undefined,
+        businessCategory: businessCategory !== undefined ? businessCategory : undefined,
+        email: email !== undefined ? email : undefined,
+        accountCreatedAt: accountCreatedAt !== undefined ? accountCreatedAt : undefined,
+        address: address !== undefined ? address : undefined,
       },
     });
 

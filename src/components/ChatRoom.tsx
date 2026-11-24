@@ -27,6 +27,10 @@ import {
   ZoomIn,
   Trash2,
   Shield,
+  Store,
+  MapPin,
+  Mail,
+  Calendar,
 } from 'lucide-react';
 import { formatDisplayPhone, isLid } from '@/lib/phone';
 
@@ -373,6 +377,49 @@ export default function ChatRoom({
           </button>
         </div>
       </header>
+
+      {/* Merchant Lapaq Context Info Banner */}
+      {(chatData?.contact?.storeName ||
+        chatData?.contact?.businessCategory ||
+        chatData?.contact?.address ||
+        chatData?.contact?.email) && (
+        <div className="bg-gradient-to-r from-amber-50/95 via-orange-50/70 to-emerald-50/60 border-b border-amber-200/70 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs z-10 shrink-0 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            {chatData.contact.storeName && (
+              <span className="font-bold text-amber-950 flex items-center gap-1.5 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-md">
+                <Store className="w-3.5 h-3.5 text-amber-700" />
+                <span>{chatData.contact.storeName}</span>
+              </span>
+            )}
+            {chatData.contact.businessCategory && (
+              <span className="bg-purple-100/90 text-purple-800 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-purple-200">
+                {chatData.contact.businessCategory}
+              </span>
+            )}
+            {chatData.contact.address && (
+              <span className="text-gray-700 text-[11px] flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-red-500 shrink-0" />
+                <span>{chatData.contact.address}</span>
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 text-[11px] text-gray-600">
+            {chatData.contact.email && (
+              <span className="flex items-center gap-1 text-slate-600">
+                <Mail className="w-3 h-3 text-slate-400" />
+                <span>{chatData.contact.email}</span>
+              </span>
+            )}
+            {chatData.contact.accountCreatedAt && (
+              <span className="flex items-center gap-1 text-slate-500">
+                <Calendar className="w-3 h-3 text-slate-400" />
+                <span>Daftar: {chatData.contact.accountCreatedAt}</span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Smart Merge Banner */}
       {isCurrentChatLid && eligibleTargetContacts.length > 0 && (
