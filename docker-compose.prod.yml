@@ -37,6 +37,7 @@ services:
     volumes:
       - ./prisma/dev.db:/app/prisma/dev.db
       - ./public/uploads:/app/public/uploads
+      - ./waha_sessions:/app/waha_sessions:ro
     depends_on:
       - waha
     networks:

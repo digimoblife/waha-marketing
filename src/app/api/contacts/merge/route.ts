@@ -38,6 +38,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Clear source lid first to prevent unique constraint violation
+    if (sourceContact?.lid) {
+      await prisma.contact.update({
+        where: { id: sourceContact.id },
+        data: { lid: null },
+      });
+    }
+
     // 1. Update target contact's lid if source was a LID
     if (sourceJid.endsWith('@lid') || (sourceContact?.phone && sourceContact.phone.length === 15)) {
       await prisma.contact.update({

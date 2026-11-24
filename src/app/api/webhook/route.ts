@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizePhone, isLid } from '@/lib/phone';
+import { resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
 
 /**
  * WAHA Webhook Handler
  * Receives events from WAHA container:
  * - 'message' (incoming & outgoing messages)
+ * - 'message.any'
  * - 'message.ack' (sent/delivered/read receipt)
  * - 'session.status' (connection updates)
  */
@@ -28,18 +30,54 @@ export async function POST(req: NextRequest) {
       const fromMe = Boolean(data.fromMe);
       const rawChatId = data.fromMe ? data.to : data.from; // e.g. "628123456789@c.us" or "...@lid"
 
-      // Check if this rawChatId is a LID that is already mapped to a contact!
+      // Check if this rawChatId is a LID that can be resolved to phone via Baileys reverse mapping
+      let resolvedPhone: string | null = null;
+      if (isLid(rawChatId)) {
+        resolvedPhone = resolveLidToPhone(rawChatId);
+      }
+
+      // Check if this rawChatId is already mapped to a contact!
       let mappedContact = await prisma.contact.findFirst({
         where: {
           OR: [
             { jid: rawChatId },
             { lid: rawChatId },
+            ...(resolvedPhone ? [{ phone: resolvedPhone }, { jid: `${resolvedPhone}@c.us` }] : []),
           ],
         },
       });
 
-      // Use the canonical contact JID if mapped
-      const chatId = mappedContact ? mappedContact.jid : rawChatId;
+      // If mappedContact exists and this is a LID, ensure the contact's lid field is saved
+      if (mappedContact && isLid(rawChatId) && !mappedContact.lid) {
+        try {
+          mappedContact = await prisma.contact.update({
+            where: { id: mappedContact.id },
+            data: { lid: rawChatId },
+          });
+        } catch (e) {
+          console.warn('[Webhook] Could not link LID to contact:', e);
+        }
+      }
+
+      // If there was an old temporary chat / contact created for this LID before it was resolved, migrate it
+      if (mappedContact && isLid(rawChatId) && rawChatId !== mappedContact.jid) {
+        try {
+          await prisma.message.updateMany({
+            where: { chatId: rawChatId },
+            data: { chatId: mappedContact.jid, contactId: mappedContact.id },
+          });
+          await prisma.chat.deleteMany({
+            where: { id: rawChatId },
+          });
+        } catch (e) {
+          // ignore cleanup errors
+        }
+      }
+
+      // Canonical chat ID: use mapped contact's JID, or resolved phone JID, or fallback to rawChatId
+      const chatId = mappedContact
+        ? mappedContact.jid
+        : (resolvedPhone ? `${resolvedPhone}@c.us` : rawChatId);
 
       // Look for real sender / pushName in all possible WAHA fields
       const pushName =
@@ -49,7 +87,7 @@ export async function POST(req: NextRequest) {
         data._data?.verifiedName ||
         null;
 
-      const rawPhone = chatId.replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, '');
+      const rawPhone = (resolvedPhone || chatId).replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, '');
       const phone = isLid(chatId) ? rawPhone : sanitizePhone(rawPhone);
       const text = data.body || (data._data && data._data.body) || '';
       
@@ -109,14 +147,19 @@ export async function POST(req: NextRequest) {
 
       // Ensure Contact exists if not mapped
       if (!mappedContact && !chatId.endsWith('@g.us')) {
-        mappedContact = await prisma.contact.create({
-          data: {
+        mappedContact = await prisma.contact.upsert({
+          where: { jid: chatId },
+          create: {
             phone,
             jid: chatId,
-            lid: isLid(chatId) ? chatId : null,
+            lid: isLid(rawChatId) ? rawChatId : null,
             pushName,
             name: defaultDisplayName,
             isWAUser: true,
+          },
+          update: {
+            lid: isLid(rawChatId) ? rawChatId : undefined,
+            pushName: pushName || undefined,
           },
         });
       } else if (mappedContact && pushName && (!mappedContact.name || mappedContact.name === phone)) {
