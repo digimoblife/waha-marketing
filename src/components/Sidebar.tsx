@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MessageSquare,
   Users,
@@ -14,6 +14,8 @@ import {
   Shield,
   LogOut,
   User,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
 
@@ -33,6 +35,7 @@ interface SidebarProps {
   onSyncWAHA: () => void;
   syncing: boolean;
   currentUser?: any;
+  onContactDeleted?: () => void;
 }
 
 export default function Sidebar({
@@ -51,7 +54,29 @@ export default function Sidebar({
   onSyncWAHA,
   syncing,
   currentUser,
+  onContactDeleted,
 }: SidebarProps) {
+  const [contactToDelete, setContactToDelete] = useState<any | null>(null);
+  const [deletingContact, setDeletingContact] = useState(false);
+
+  const handleDeleteContact = async (deleteChats = false) => {
+    if (!contactToDelete || deletingContact) return;
+    setDeletingContact(true);
+    try {
+      const res = await fetch(
+        `/api/contacts?id=${encodeURIComponent(contactToDelete.id)}&deleteChats=${deleteChats}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menghapus kontak');
+      setContactToDelete(null);
+      if (onContactDeleted) onContactDeleted();
+    } catch (err: any) {
+      alert(`Gagal: ${err.message}`);
+    } finally {
+      setDeletingContact(false);
+    }
+  };
   const filteredChats = chats.filter((c) => {
     const name = (c.contact?.name || c.name || c.id || '').toLowerCase();
     const phone = (c.contact?.phone || '').toLowerCase();
@@ -264,7 +289,7 @@ export default function Sidebar({
                 <div
                   key={c.id}
                   onClick={() => onSelectChat(c.jid)}
-                  className="px-3 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition"
+                  className="group px-3 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition relative"
                 >
                   <div className="w-10 h-10 rounded-full bg-[#128C7E]/10 text-[#075E54] shrink-0 flex items-center justify-center font-bold text-sm">
                     {displayName.charAt(0).toUpperCase()}
@@ -293,6 +318,19 @@ export default function Sidebar({
                       )}
                     </div>
                   </div>
+
+                  {/* Delete Contact Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setContactToDelete(c);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition shrink-0 cursor-pointer"
+                    title="Hapus Kontak"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               );
             })
@@ -338,6 +376,63 @@ export default function Sidebar({
           </button>
         </div>
       </footer>
+
+      {/* CONFIRMATION MODAL: HAPUS KONTAK */}
+      {contactToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4 border border-gray-100">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto shadow-sm">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-base font-bold text-gray-900">
+                Hapus Kontak
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Yakin ingin menghapus kontak{' '}
+                <span className="font-semibold text-gray-800">
+                  {contactToDelete.name || contactToDelete.phone}
+                </span>{' '}
+                ({formatDisplayPhone(contactToDelete.phone)}) dari buku telepon?
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleDeleteContact(false)}
+                disabled={deletingContact}
+                className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              >
+                {deletingContact ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span>Hapus Kontak Saja</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDeleteContact(true)}
+                disabled={deletingContact}
+                className="w-full py-2 px-4 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-xs rounded-xl transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Hapus Kontak & Obrolannya</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setContactToDelete(null)}
+                disabled={deletingContact}
+                className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

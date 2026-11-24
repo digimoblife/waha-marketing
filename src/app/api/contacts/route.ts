@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizePhone, phoneToJid } from '@/lib/phone';
 import { waha } from '@/lib/waha';
+import { createLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,6 +137,80 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true, contact });
   } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// DELETE contact
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    const jid = searchParams.get('jid');
+    const deleteChats = searchParams.get('deleteChats') === 'true';
+
+    if (!id && !jid) {
+      return NextResponse.json(
+        { error: 'id atau jid wajib diisi' },
+        { status: 400 }
+      );
+    }
+
+    const contact = await prisma.contact.findFirst({
+      where: {
+        OR: [
+          ...(id ? [{ id }] : []),
+          ...(jid ? [{ jid }] : []),
+        ],
+      },
+    });
+
+    if (!contact) {
+      return NextResponse.json({ error: 'Kontak tidak ditemukan' }, { status: 404 });
+    }
+
+    if (deleteChats) {
+      // Delete messages and chats associated with this contact
+      await prisma.message.deleteMany({
+        where: {
+          OR: [
+            { contactId: contact.id },
+            { chatId: contact.jid },
+            ...(contact.lid ? [{ chatId: contact.lid }] : []),
+          ],
+        },
+      });
+
+      await prisma.chat.deleteMany({
+        where: {
+          OR: [
+            { contactId: contact.id },
+            { id: contact.jid },
+            ...(contact.lid ? [{ id: contact.lid }] : []),
+          ],
+        },
+      });
+    }
+
+    await prisma.contact.delete({
+      where: { id: contact.id },
+    });
+
+    await createLog(
+      'AUTH',
+      'SUCCESS',
+      `Kontak "${contact.name || contact.phone}" (${contact.phone}) berhasil dihapus${
+        deleteChats ? ' beserta obrolannya' : ''
+      }`
+    );
+
+    return NextResponse.json({
+      ok: true,
+      message: 'Kontak berhasil dihapus',
+      contactId: contact.id,
+    });
+  } catch (err: any) {
+    console.error('Delete contact error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

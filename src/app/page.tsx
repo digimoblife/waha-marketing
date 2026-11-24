@@ -276,6 +276,10 @@ export default function Home() {
         onSyncWAHA={handleSyncWAHA}
         syncing={syncing}
         currentUser={currentUser}
+        onContactDeleted={() => {
+          fetchContacts();
+          fetchChats();
+        }}
       />
 
       {/* Main Area (Right) */}
