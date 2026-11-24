@@ -20,8 +20,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
+    console.log(`[Webhook] Received event: ${event}, fromMe: ${data?.fromMe}, from: ${data?.from}, to: ${data?.to}`);
+
     // 1. Handle incoming / outgoing message
-    if (event === 'message') {
+    if (event === 'message' || event === 'message.any') {
       const msgId = data.id;
       const fromMe = Boolean(data.fromMe);
       const rawChatId = data.fromMe ? data.to : data.from; // e.g. "628123456789@c.us" or "...@lid"

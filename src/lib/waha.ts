@@ -53,10 +53,24 @@ export const waha = {
 
   async startSession(session = DEFAULT_SESSION) {
     try {
+      const webhookUrl = process.env.APP_DOCKER_URL
+        ? `${process.env.APP_DOCKER_URL}/api/webhook`
+        : 'http://web:3050/api/webhook';
+
       const res = await fetch(`${WAHA_URL}/api/sessions/start`, {
         method: 'POST',
         headers: getHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ name: session }),
+        body: JSON.stringify({
+          name: session,
+          config: {
+            webhooks: [
+              {
+                url: webhookUrl,
+                events: ['message', 'message.any', 'message.ack', 'session.status'],
+              },
+            ],
+          },
+        }),
       });
       return await res.json();
     } catch (err: any) {
