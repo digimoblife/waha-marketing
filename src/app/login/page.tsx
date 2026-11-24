@@ -2,7 +2,7 @@
 
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { MessageSquare, Lock, User, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { MessageSquare, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
 
 function LoginForm() {
   const router = useRouter();
@@ -33,11 +33,10 @@ function LoginForm() {
         throw new Error(data.error || 'Login gagal');
       }
 
-      router.push(redirectUrl);
-      router.refresh();
+      // Hard redirect immediately to ensure cookie is sent and middleware redirects cleanly on first click
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -133,22 +132,6 @@ export default function LoginPage() {
           <Suspense fallback={<div className="py-8 text-center text-xs text-slate-400">Memuat form login...</div>}>
             <LoginForm />
           </Suspense>
-
-          {/* Default Credentials Info Box */}
-          <div className="mt-6 pt-5 border-t border-slate-100">
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-[#128C7E] shrink-0 mt-0.5" />
-              <div className="text-[11px] leading-relaxed">
-                <span className="font-semibold text-slate-800 block">Akun Admin Bawaan:</span>
-                <span>Username: <code className="bg-slate-200 px-1 rounded text-slate-900 font-mono">admin</code></span>
-                <span className="mx-1">•</span>
-                <span>Password: <code className="bg-slate-200 px-1 rounded text-slate-900 font-mono">admin123</code></span>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Anda dapat mengubah password atau membuat user baru di User Management.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="text-center mt-6 text-slate-500 text-xs">

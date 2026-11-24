@@ -26,6 +26,7 @@ import {
   Loader2,
   ZoomIn,
   Trash2,
+  Shield,
 } from 'lucide-react';
 import { formatDisplayPhone, isLid } from '@/lib/phone';
 
@@ -353,7 +354,16 @@ export default function ChatRoom({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 text-gray-500">
+        <div className="flex items-center gap-2 text-gray-500">
+          <a
+            href="/admin"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-300 text-xs font-semibold text-[#075E54] rounded-lg transition shadow-2xs cursor-pointer"
+            title="Buka TailAdmin Dashboard"
+          >
+            <Shield className="w-3.5 h-3.5 text-[#128C7E]" />
+            <span className="hidden sm:inline">Buka Dashboard Admin</span>
+          </a>
+
           <button
             onClick={() => setShowDeleteModal(true)}
             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition cursor-pointer"

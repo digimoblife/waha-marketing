@@ -339,31 +339,22 @@ export default function Sidebar({
       </div>
 
       {/* User Footer Bar */}
-      <footer className="p-3 bg-[#F0F2F5] border-t border-gray-200 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-[#128C7E] text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs shrink-0">
-            {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
+      <footer className="p-3 bg-[#F0F2F5] border-t border-gray-200 flex flex-col gap-2 shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-[#128C7E] text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs shrink-0">
+              {currentUser?.name ? currentUser.name.charAt(0) : 'U'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-gray-800 truncate">
+                {currentUser?.name || 'Operator'}
+              </p>
+              <span className="text-[10px] text-gray-500 font-mono block">
+                {currentUser?.role || 'OPERATOR'}
+              </span>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-gray-800 truncate">
-              {currentUser?.name || 'Operator'}
-            </p>
-            <span className="text-[10px] text-gray-500 font-mono block">
-              {currentUser?.role || 'OPERATOR'}
-            </span>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-1">
-          {currentUser?.role === 'ADMIN' && (
-            <a
-              href="/admin"
-              title="Buka TailAdmin Dashboard"
-              className="p-1.5 text-gray-600 hover:text-[#075E54] hover:bg-white rounded-lg transition shadow-2xs border border-transparent hover:border-gray-200"
-            >
-              <Shield className="w-4 h-4 text-[#128C7E]" />
-            </a>
-          )}
           <button
             onClick={async () => {
               await fetch('/api/auth/logout', { method: 'POST' });
@@ -375,6 +366,16 @@ export default function Sidebar({
             <LogOut className="w-4 h-4" />
           </button>
         </div>
+
+        {currentUser?.role === 'ADMIN' && (
+          <a
+            href="/admin"
+            className="w-full py-1.5 px-3 bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-300 text-xs font-semibold text-[#075E54] rounded-lg transition flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
+          >
+            <Shield className="w-3.5 h-3.5 text-[#128C7E]" />
+            <span>Buka Dashboard Admin</span>
+          </a>
+        )}
       </footer>
 
       {/* CONFIRMATION MODAL: HAPUS KONTAK */}
