@@ -16,6 +16,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
     }
 
+    // Reset unreadCount for this chat because operator is viewing/fetching its messages
+    await prisma.chat.updateMany({
+      where: { id: chatId, unreadCount: { gt: 0 } },
+      data: { unreadCount: 0 },
+    }).catch(() => null);
+
     const messages = await prisma.message.findMany({
       where: { chatId },
       orderBy: { timestamp: 'asc' },

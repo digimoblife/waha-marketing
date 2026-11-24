@@ -271,7 +271,7 @@ export default function Sidebar({
                       <p className="truncate pr-2">
                         {c.lastMessage || <span className="italic text-gray-400">Tidak ada pesan</span>}
                       </p>
-                      {c.unreadCount > 0 && (
+                      {c.unreadCount > 0 && selectedChatId !== c.id && (
                         <span className="shrink-0 bg-[#25D366] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                           {c.unreadCount}
                         </span>

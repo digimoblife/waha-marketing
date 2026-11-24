@@ -7,8 +7,7 @@ import { createLog } from '@/lib/logger';
 /**
  * WAHA Webhook Handler
  * Receives events from WAHA container:
- * - 'message' (incoming & outgoing messages)
- * - 'message.any'
+ * - 'message' / 'message.any' (incoming & outgoing messages)
  * - 'message.ack' (sent/delivered/read receipt)
  * - 'session.status' (connection updates)
  */
@@ -27,8 +26,25 @@ export async function POST(req: NextRequest) {
     // 1. Handle incoming / outgoing message
     if (event === 'message' || event === 'message.any') {
       const msgId = data.id;
+      if (!msgId) {
+        return NextResponse.json({ ok: true, ignored: 'no_id' });
+      }
+
       const fromMe = Boolean(data.fromMe);
-      const rawChatId = data.fromMe ? data.to : data.from; // e.g. "628123456789@c.us" or "...@lid"
+      const rawChatId =
+        (fromMe
+          ? (data.to || data._data?.key?.remoteJid || data.from)
+          : (data.from || data._data?.key?.remoteJid)) || '';
+
+      if (!rawChatId) {
+        console.warn('[Webhook] Could not determine chatId from payload:', data);
+        return NextResponse.json({ ok: true, ignored: 'no_chat_id' });
+      }
+
+      // Check if message is already stored (DEDUPLICATION to prevent duplicate unreadCount increments)
+      const existingMsg = await prisma.message.findUnique({
+        where: { id: msgId },
+      });
 
       // Check if this rawChatId is a LID that can be resolved to phone via Baileys reverse mapping
       let resolvedPhone: string | null = null;
@@ -181,6 +197,11 @@ export async function POST(req: NextRequest) {
         else lastMsgSnippet = fileName ? `📄 ${fileName}` : '📄 Dokumen';
       }
 
+      // ONLY increment unreadCount if this is a BRAND NEW INCOMING message!
+      // Outgoing messages (fromMe) reset unreadCount to 0.
+      // If message ID was already processed, DO NOT increment unreadCount again.
+      const isNewIncoming = !fromMe && !existingMsg;
+
       // Upsert Chat
       await prisma.chat.upsert({
         where: { id: chatId },
@@ -190,19 +211,21 @@ export async function POST(req: NextRequest) {
           isGroup: chatId.endsWith('@g.us'),
           lastMessage: lastMsgSnippet,
           lastMessageAt: timestamp,
-          unreadCount: fromMe ? 0 : 1,
+          unreadCount: isNewIncoming ? 1 : 0,
           contactId: mappedContact?.id || null,
         },
         update: {
           name: mappedContact?.name || mappedContact?.pushName || undefined,
           lastMessage: lastMsgSnippet,
           lastMessageAt: timestamp,
-          unreadCount: fromMe ? undefined : { increment: 1 },
+          unreadCount: fromMe
+            ? 0
+            : (isNewIncoming ? { increment: 1 } : undefined),
           contactId: mappedContact?.id || undefined,
         },
       });
 
-      // Insert Message (skip if already exists)
+      // Insert Message (skip or update if already exists)
       await prisma.message.upsert({
         where: { id: msgId },
         create: {
@@ -229,7 +252,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      if (!fromMe) {
+      if (isNewIncoming) {
         await createLog(
           'MESSAGE_RECEIVED',
           'SUCCESS',
@@ -238,7 +261,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      return NextResponse.json({ ok: true, processed: 'message', routedTo: chatId });
+      return NextResponse.json({ ok: true, processed: 'message', routedTo: chatId, isNewIncoming });
     }
 
     // 2. Handle Message Delivery / Read Receipt (ACK)

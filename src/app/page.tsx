@@ -56,15 +56,18 @@ export default function Home() {
       const data = await res.json();
       if (data.chats) {
         setChats((prev) => {
+          const chatsWithActive = data.chats.map((c: any) =>
+            c.id === selectedChatId ? { ...c, unreadCount: 0 } : c
+          );
           const prevKey = prev.map((c) => `${c.id}-${c.lastMessage}-${c.unreadCount}`).join('|');
-          const nextKey = data.chats.map((c: any) => `${c.id}-${c.lastMessage}-${c.unreadCount}`).join('|');
-          return prevKey === nextKey ? prev : data.chats;
+          const nextKey = chatsWithActive.map((c: any) => `${c.id}-${c.lastMessage}-${c.unreadCount}`).join('|');
+          return prevKey === nextKey ? prev : chatsWithActive;
         });
       }
     } catch (err) {
       console.error('Fetch chats error:', err);
     }
-  }, []);
+  }, [selectedChatId]);
 
   // Fetch contacts list (only updates state if data changed)
   const fetchContacts = useCallback(async () => {
@@ -150,6 +153,9 @@ export default function Home() {
     setSelectedChatId(chatId);
     setMessages([]); // clear previous chat immediately
     setActiveTab('chats');
+    setChats((prev) =>
+      prev.map((c) => (c.id === chatId ? { ...c, unreadCount: 0 } : c))
+    );
 
     try {
       await fetch('/api/chats', {

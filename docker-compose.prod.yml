@@ -12,7 +12,7 @@ services:
       WAHA_PRINT_QR: "False"
       WAHA_LOG_LEVEL: info
       WHATSAPP_HOOK_URL: http://web:3050/api/webhook
-      WHATSAPP_HOOK_EVENTS: message,message.any,message.ack,session.status
+      WHATSAPP_HOOK_EVENTS: message.any,message.ack,session.status
     volumes:
       - ./waha_sessions:/app/.sessions
     networks:
