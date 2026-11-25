@@ -249,7 +249,16 @@ export default function Home() {
 
       const data = await res.json();
       if (data.message) {
-        setMessages((prev) => [...prev, data.message]);
+        setMessages((prev) => {
+          const newMsgStanza = (data.message.id || '').split('_').pop();
+          const exists = prev.some((m) => {
+            if (m.id === data.message.id) return true;
+            const mStanza = (m.id || '').split('_').pop();
+            return newMsgStanza && mStanza && newMsgStanza === mStanza;
+          });
+          if (exists) return prev;
+          return [...prev, data.message];
+        });
         fetchChats();
       }
     } catch (err) {

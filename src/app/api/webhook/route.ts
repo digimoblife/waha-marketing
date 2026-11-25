@@ -3,9 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { sanitizePhone, isLid, normalizeJid, jidToPhone } from '@/lib/phone';
 import { resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
-
-// In-memory cache of recently received message IDs to eliminate concurrent duplicate webhooks (0ms latency check)
-const processedMsgIds = new Set<string>();
+import { isMessageProcessed, markMessageProcessed, extractStanzaId } from '@/lib/msg-cache';
 
 /**
  * WAHA Webhook Handler
@@ -33,13 +31,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, ignored: 'no_id' });
       }
 
-      // Fast in-memory deduplication: if this msgId is already being processed, discard immediately
-      if (processedMsgIds.has(msgId)) {
-        console.log(`[Webhook] Concurrent duplicate ignored in-memory for msgId: ${msgId}`);
+      const stanzaId = data._data?.key?.id || data.key?.id || extractStanzaId(msgId);
+
+      // Fast in-memory deduplication: if this msgId or stanzaId is already being processed, discard immediately
+      if (isMessageProcessed(msgId) || (stanzaId && isMessageProcessed(stanzaId))) {
+        console.log(`[Webhook] Concurrent duplicate ignored in-memory for msgId: ${msgId}, stanzaId: ${stanzaId}`);
         return NextResponse.json({ ok: true, ignored: 'duplicate_in_memory' });
       }
-      processedMsgIds.add(msgId);
-      setTimeout(() => processedMsgIds.delete(msgId), 60000);
+      markMessageProcessed(msgId);
+      if (stanzaId) markMessageProcessed(stanzaId);
 
       const fromMe = Boolean(data.fromMe);
       let rawChatId =
@@ -54,14 +54,6 @@ export async function POST(req: NextRequest) {
 
       // Immediately normalize rawChatId from @s.whatsapp.net to canonical @c.us
       rawChatId = normalizeJid(rawChatId);
-
-      // Database check: if message already exists, do not process again
-      const existingMsg = await prisma.message.findUnique({
-        where: { id: msgId },
-      });
-      if (existingMsg) {
-        return NextResponse.json({ ok: true, ignored: 'already_exists_in_db' });
-      }
 
       // Check if this rawChatId is a LID that can be resolved to phone via Baileys reverse mapping
       let resolvedPhone: string | null = null;
@@ -145,6 +137,45 @@ export async function POST(req: NextRequest) {
         }).catch(() => null);
       }
 
+      const text = data.body || (data._data && data._data.body) || '';
+
+      // Database check: verify if message already exists by msgId OR stanzaId OR serializedId
+      const existingMsg = await prisma.message.findFirst({
+        where: {
+          OR: [
+            { id: msgId },
+            ...(stanzaId ? [
+              { id: stanzaId },
+              { id: { endsWith: stanzaId } },
+              { id: `true_${chatId}_${stanzaId}` },
+              { id: `false_${chatId}_${stanzaId}` },
+            ] : []),
+          ],
+        },
+      });
+      if (existingMsg) {
+        console.log(`[Webhook] Duplicate message ignored (already in DB: ${existingMsg.id})`);
+        return NextResponse.json({ ok: true, ignored: 'already_exists_in_db' });
+      }
+
+      // Outgoing message deduplication: If sent from our web UI in the last 15 seconds, avoid double-entry
+      if (fromMe && text) {
+        const recentDuplicate = await prisma.message.findFirst({
+          where: {
+            chatId,
+            fromMe: true,
+            body: text,
+            timestamp: {
+              gte: new Date(Date.now() - 15000),
+            },
+          },
+        });
+        if (recentDuplicate) {
+          console.log(`[Webhook] Outgoing message already recorded for chatId ${chatId}: ${text}`);
+          return NextResponse.json({ ok: true, ignored: 'recent_outgoing_duplicate' });
+        }
+      }
+
       // Look for real sender / pushName in all possible WAHA fields
       const pushName =
         data.pushName ||
@@ -155,7 +186,6 @@ export async function POST(req: NextRequest) {
 
       const rawPhone = (resolvedPhone || chatId).replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, '');
       const phone = isLid(chatId) ? rawPhone : sanitizePhone(rawPhone);
-      const text = data.body || (data._data && data._data.body) || '';
       
       // Media detection
       let mediaType = 'text';
@@ -332,12 +362,21 @@ export async function POST(req: NextRequest) {
 
     // 2. Handle Message Delivery / Read Receipt (ACK)
     if (event === 'message.ack') {
-      const msgId = data.id?.id || data.id;
+      const rawAckId = data.id?.id || data.id;
       const ack = typeof data.ack === 'number' ? data.ack : 1;
 
-      if (msgId) {
+      if (rawAckId) {
+        const stanza = typeof rawAckId === 'string' ? extractStanzaId(rawAckId) : '';
         await prisma.message.updateMany({
-          where: { id: msgId },
+          where: {
+            OR: [
+              { id: rawAckId },
+              ...(stanza ? [
+                { id: stanza },
+                { id: { endsWith: stanza } },
+              ] : []),
+            ],
+          },
           data: { ackStatus: ack },
         });
       }

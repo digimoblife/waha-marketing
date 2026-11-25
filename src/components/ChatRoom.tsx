@@ -318,8 +318,17 @@ export default function ChatRoom({
       cleanUrl = `https://${cleanUrl}`;
     }
 
-    const snippet = linkTitle.trim() ? `${linkTitle.trim()}\n${cleanUrl}` : cleanUrl;
-    setText((prev) => (prev ? `${prev}\n${snippet}` : snippet));
+    const title = linkTitle.trim();
+    // Only prepend title if it's not identical to the URL itself
+    const isTitleUrl = title === cleanUrl || title === linkUrl.trim();
+    const snippet = title && !isTitleUrl ? `${title}\n${cleanUrl}` : cleanUrl;
+
+    setText((prev) => {
+      if (!prev) return snippet;
+      if (prev.trim() === snippet) return prev;
+      return `${prev}\n${snippet}`;
+    });
+
     setLinkUrl('');
     setLinkTitle('');
     setShowLinkModal(false);

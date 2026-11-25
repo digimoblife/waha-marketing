@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { waha } from '@/lib/waha';
 import { sanitizePhone, normalizeJid } from '@/lib/phone';
 import { createLog } from '@/lib/logger';
+import { markMessageProcessed, extractStanzaId } from '@/lib/msg-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,13 +37,45 @@ export async function GET(req: NextRequest) {
       data: { unreadCount: 0 },
     }).catch(() => null);
 
-    const messages = await prisma.message.findMany({
+    const rawMessages = await prisma.message.findMany({
       where: { chatId },
       orderBy: { timestamp: 'asc' },
-      take: 150,
+      take: 200,
     });
 
-    return NextResponse.json({ messages });
+    // Deduplicate messages on the fly:
+    // Two messages are duplicates if they share the same stanza ID or identical text/media within 10 seconds
+    const dedupedMessages: typeof rawMessages = [];
+    const seenStanzas = new Set<string>();
+    const seenContentBuckets = new Set<string>();
+    const duplicateIdsToDelete: string[] = [];
+
+    for (const msg of rawMessages) {
+      const stanza = extractStanzaId(msg.id);
+      const timeBucket = Math.floor(new Date(msg.timestamp).getTime() / 15000); // 15-second bucket
+      const contentKey = `${msg.chatId}_${msg.fromMe}_${(msg.body || '').trim()}_${timeBucket}`;
+
+      const isStanzaDuplicate = stanza ? seenStanzas.has(stanza) : false;
+      const isContentDuplicate = msg.body ? seenContentBuckets.has(contentKey) : false;
+
+      if (isStanzaDuplicate || isContentDuplicate) {
+        duplicateIdsToDelete.push(msg.id);
+        continue;
+      }
+
+      if (stanza) seenStanzas.add(stanza);
+      if (msg.body) seenContentBuckets.add(contentKey);
+      dedupedMessages.push(msg);
+    }
+
+    // Asynchronously delete duplicate copies from database so DB stays permanently clean
+    if (duplicateIdsToDelete.length > 0) {
+      prisma.message.deleteMany({
+        where: { id: { in: duplicateIdsToDelete } },
+      }).catch(() => null);
+    }
+
+    return NextResponse.json({ messages: dedupedMessages });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -153,11 +186,17 @@ export async function POST(req: NextRequest) {
       wahaRes = await waha.sendText(chatId, text, replyTo);
     }
 
-    const msgId = wahaRes?.key?.id || wahaRes?.id || wahaRes?._data?.id || `out_${Date.now()}`;
+    const stanzaId = wahaRes?.key?.id || wahaRes?.id || wahaRes?._data?.id;
+    const msgId = stanzaId ? `true_${chatId}_${stanzaId}` : `out_${Date.now()}`;
 
-    // 5. Save message to database
-    const savedMessage = await prisma.message.create({
-      data: {
+    // Mark in memory cache so incoming webhook immediately ignores it
+    if (stanzaId) markMessageProcessed(stanzaId);
+    markMessageProcessed(msgId);
+
+    // 5. Save message to database (or update if already inserted by webhook)
+    const savedMessage = await prisma.message.upsert({
+      where: { id: msgId },
+      create: {
         id: msgId,
         chatId,
         contactId: contact?.id || null,
@@ -171,6 +210,9 @@ export async function POST(req: NextRequest) {
         quotedBody,
         quotedSender,
         timestamp,
+      },
+      update: {
+        ackStatus: 1,
       },
     });
 
