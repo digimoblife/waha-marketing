@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs/promises';
+import path from 'path';
 import { prisma } from '@/lib/prisma';
 import { waha } from '@/lib/waha';
 import { sanitizePhone, normalizeJid } from '@/lib/phone';
@@ -172,16 +174,39 @@ export async function POST(req: NextRequest) {
     // 4. Send via WAHA WhatsApp API (Text or File)
     let wahaRes: any;
     if (mediaUrl) {
-      // Send file to WAHA using docker URL (accessible from container) or mediaUrl
-      const targetFileUrl = dockerUrl || mediaUrl;
+      let fileToSend = dockerUrl || mediaUrl;
+
+      // If this is a local uploaded file, convert to base64 Data URL so WAHA receives the file
+      // directly in-memory without making an external HTTP fetch that might fail or 404!
+      if (typeof mediaUrl === 'string' && mediaUrl.startsWith('/uploads/')) {
+        try {
+          const localFilePath = path.join(process.cwd(), 'public', mediaUrl.replace(/^\//, ''));
+          const fileBuf = await fs.readFile(localFilePath);
+          const b64 = fileBuf.toString('base64');
+          const finalMime = mimeType || (mediaType === 'image' ? 'image/jpeg' : mediaType === 'video' ? 'video/mp4' : 'application/octet-stream');
+          fileToSend = `data:${finalMime};base64,${b64}`;
+        } catch (readErr) {
+          console.warn('[Message] Could not read local media file for data URL:', readErr);
+        }
+      }
+
       wahaRes = await waha.sendFile(
         chatId,
-        targetFileUrl,
+        fileToSend,
         caption || undefined,
         replyTo || undefined,
         fileName || undefined,
         mimeType || undefined
       );
+
+      // Validate WAHA response: If WAHA reported an error or non-200 status, throw error!
+      if (wahaRes?.error || wahaRes?.status >= 400 || (wahaRes?.statusCode && wahaRes.statusCode >= 400)) {
+        const errorMsg =
+          wahaRes?.error?.message ||
+          wahaRes?.message ||
+          (typeof wahaRes?.error === 'string' ? wahaRes.error : 'Gagal mengirim file ke WhatsApp');
+        throw new Error(errorMsg);
+      }
     } else {
       wahaRes = await waha.sendText(chatId, text, replyTo);
     }
