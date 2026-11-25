@@ -85,6 +85,10 @@ export default function ChatRoom({
   const [linkUrl, setLinkUrl] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
 
+  // Emoji picker state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeEmojiCat, setActiveEmojiCat] = useState(0);
+
   // Media preview & upload states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
@@ -95,6 +99,74 @@ export default function ChatRoom({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  const EMOJI_CATEGORIES = [
+    {
+      label: 'Ekspresi',
+      icon: '😊',
+      emojis: [
+        '😊', '😁', '😂', '🤣', '😍', '🥰', '😘', '😉',
+        '🙏', '👍', '👏', '🙌', '🤝', '👋', '✌️', '👌',
+        '🤗', '🤔', '😅', '😢', '😭', '😔', '😤', '😮',
+        '❤️', '💚', '🧡', '💛', '💙', '🎉', '🔥', '⭐',
+      ],
+    },
+    {
+      label: 'Bisnis',
+      icon: '🛒',
+      emojis: [
+        '🛒', '🛍️', '📦', '🚚', '💳', '💰', '💸', '🏷️',
+        '🧾', '📱', '💻', '🏪', '✨', '🚀', '📢', '📌',
+        '🕒', '📍', '🔗', '📝', '📸', '🎁', '💎', '📈',
+      ],
+    },
+    {
+      label: 'Simbol',
+      icon: '✅',
+      emojis: [
+        '✅', '☑️', '✔️', '❌', '❗', '❓', '💡', '🔔',
+        '👉', '👇', '👆', '➡️', '⬅️', '💯', '🎯', '🏆',
+        '🌟', '☀️', '☕', '🍀', '💐', '🎊', '📣', '💬',
+      ],
+    },
+  ];
+
+  // Close emoji picker on outside click or Escape
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowEmojiPicker(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [showEmojiPicker]);
+
+  const handleInsertEmoji = (emoji: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setText((prev) => prev + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+    const nextText = text.slice(0, start) + emoji + text.slice(end);
+    setText(nextText);
+    setTimeout(() => {
+      el.focus();
+      const pos = start + emoji.length;
+      el.setSelectionRange(pos, pos);
+    }, 0);
+  };
 
   // Set display name from props
   useEffect(() => {
@@ -761,14 +833,55 @@ export default function ChatRoom({
           </div>
         )}
 
-        <div className="flex items-end gap-2">
-          <button
-            type="button"
-            title="Emoji"
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-200/80 transition mb-0.5"
-          >
-            <Smile className="w-5 h-5" />
-          </button>
+        <div className="flex items-end gap-2 relative">
+          {/* Emoji Picker Button & Popover */}
+          <div ref={emojiPickerRef} className="relative">
+            {showEmojiPicker && (
+              <div className="absolute bottom-12 left-0 z-40 w-72 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
+                <div className="flex items-center border-b border-gray-100 bg-gray-50/80 px-2 pt-1.5 gap-1">
+                  {EMOJI_CATEGORIES.map((cat, idx) => (
+                    <button
+                      key={cat.label}
+                      type="button"
+                      onClick={() => setActiveEmojiCat(idx)}
+                      className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-t-lg transition flex items-center justify-center gap-1 cursor-pointer ${
+                        activeEmojiCat === idx
+                          ? 'bg-white text-[#075E54] border-b-2 border-[#128C7E] shadow-xs'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/70'
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-2.5 grid grid-cols-8 gap-1 max-h-52 overflow-y-auto">
+                  {EMOJI_CATEGORIES[activeEmojiCat].emojis.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleInsertEmoji(emoji)}
+                      className="w-8 h-8 flex items-center justify-center text-lg rounded-lg hover:bg-gray-100 active:scale-95 transition cursor-pointer"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker((prev) => !prev)}
+              title="Emoji"
+              className={`p-2 rounded-full transition mb-0.5 cursor-pointer ${
+                showEmojiPicker
+                  ? 'bg-[#128C7E]/15 text-[#075E54]'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/80'
+              }`}
+            >
+              <Smile className="w-5 h-5" />
+            </button>
+          </div>
 
           {/* Attachment Paperclip Button */}
           <button
