@@ -31,6 +31,8 @@ import {
   MapPin,
   Mail,
   Calendar,
+  ExternalLink,
+  Globe,
 } from 'lucide-react';
 import { formatDisplayPhone, isLid } from '@/lib/phone';
 import { formatAccountDate } from '@/lib/date';
@@ -77,6 +79,11 @@ export default function ChatRoom({
   const [replyingTo, setReplyingTo] = useState<any | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingChat, setDeletingChat] = useState(false);
+
+  // Link modal state
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
 
   // Media preview & upload states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -257,6 +264,66 @@ export default function ChatRoom({
     if (!timestampStr) return '';
     const date = new Date(timestampStr);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Helper to extract first URL for preview card
+  const getFirstUrl = (content: string): string | null => {
+    if (!content) return null;
+    const match = content.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/i);
+    if (!match) return null;
+    let url = match[0];
+    if (url.startsWith('www.')) url = `https://${url}`;
+    try {
+      new URL(url);
+      return url;
+    } catch {
+      return null;
+    }
+  };
+
+  // Helper to render message body with clickable URLs
+  const renderMessageBody = (content: string) => {
+    if (!content) return null;
+
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+    const parts = content.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        const href = part.startsWith('http') ? part : `https://${part}`;
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-700 underline font-medium break-all inline-flex items-center gap-0.5 hover:opacity-85 transition cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>{part}</span>
+            <ExternalLink className="w-3 h-3 inline-block shrink-0 opacity-80 ml-0.5" />
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
+  const handleInsertLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkUrl.trim()) return;
+
+    let cleanUrl = linkUrl.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
+
+    const snippet = linkTitle.trim() ? `${linkTitle.trim()}\n${cleanUrl}` : cleanUrl;
+    setText((prev) => (prev ? `${prev}\n${snippet}` : snippet));
+    setLinkUrl('');
+    setLinkTitle('');
+    setShowLinkModal(false);
+    setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
   const isCurrentChatLid = isLid(chatId);
@@ -583,9 +650,47 @@ export default function ChatRoom({
 
                   {/* Message Text / Caption body */}
                   {m.body && (
-                    <p className="whitespace-pre-wrap leading-relaxed text-[13.5px] px-1">
-                      {m.body}
-                    </p>
+                    <div className="text-[13.5px] leading-relaxed px-1">
+                      <p className="whitespace-pre-wrap">
+                        {renderMessageBody(m.body)}
+                      </p>
+
+                      {/* Interactive Link Preview Card */}
+                      {getFirstUrl(m.body) && (
+                        <a
+                          href={getFirstUrl(m.body)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className={`mt-2 block rounded-xl p-2.5 transition border text-left group no-underline ${
+                            isMe
+                              ? 'bg-emerald-900/10 hover:bg-emerald-900/15 border-emerald-900/10'
+                              : 'bg-black/5 hover:bg-black/10 border-black/10'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 flex items-center justify-center shrink-0">
+                              <Globe className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-gray-800 truncate group-hover:text-blue-600 transition">
+                                {(() => {
+                                  try {
+                                    return new URL(getFirstUrl(m.body)!).hostname;
+                                  } catch {
+                                    return 'Buka Tautan';
+                                  }
+                                })()}
+                              </p>
+                              <p className="text-[11px] text-gray-500 truncate flex items-center gap-1">
+                                <span className="truncate">{getFirstUrl(m.body)}</span>
+                                <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-70" />
+                              </p>
+                            </div>
+                          </div>
+                        </a>
+                      )}
+                    </div>
                   )}
 
                   {/* Timestamp & Status footer */}
@@ -664,6 +769,16 @@ export default function ChatRoom({
             className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-200/80 transition mb-0.5 cursor-pointer"
           >
             <Paperclip className="w-5 h-5" />
+          </button>
+
+          {/* Insert Link Button */}
+          <button
+            type="button"
+            onClick={() => setShowLinkModal(true)}
+            title="Kirim Tautan / Link Website"
+            className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-200/80 transition mb-0.5 cursor-pointer"
+          >
+            <Link2 className="w-5 h-5" />
           </button>
 
           {/* Text Input area */}
@@ -861,6 +976,73 @@ export default function ChatRoom({
                 Batal
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* INSERT LINK MODAL */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100">
+            <div className="bg-[#075E54] text-white px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-emerald-300" />
+                <h3 className="font-semibold text-sm">Kirim Tautan / Link</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLinkModal(false)}
+                className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInsertLink} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Alamat URL / Link <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://contoh.com/halaman"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  autoFocus
+                  required
+                  className="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#128C7E] focus:border-transparent transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Keterangan / Teks Pengantar (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Silakan cek panduan di tautan berikut ya:"
+                  value={linkTitle}
+                  onChange={(e) => setLinkTitle(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#128C7E] focus:border-transparent transition"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLinkModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!linkUrl.trim()}
+                  className="px-4 py-2 text-xs font-semibold bg-[#128C7E] hover:bg-[#075E54] disabled:opacity-50 text-white rounded-xl shadow transition cursor-pointer"
+                >
+                  Sisipkan Tautan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

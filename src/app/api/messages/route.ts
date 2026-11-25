@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
       wahaRes = await waha.sendText(chatId, text, replyTo);
     }
 
-    const msgId = wahaRes?.id || `out_${Date.now()}`;
+    const msgId = wahaRes?.key?.id || wahaRes?.id || wahaRes?._data?.id || `out_${Date.now()}`;
 
     // 5. Save message to database
     const savedMessage = await prisma.message.create({

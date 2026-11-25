@@ -177,21 +177,35 @@ export async function POST(req: NextRequest) {
 
       // Ensure Contact exists if not mapped
       if (!mappedContact && !chatId.endsWith('@g.us')) {
-        mappedContact = await prisma.contact.upsert({
-          where: { jid: chatId },
-          create: {
-            phone,
-            jid: chatId,
-            lid: isLid(rawChatId) ? rawChatId : null,
-            pushName,
-            name: defaultDisplayName,
-            isWAUser: true,
-          },
-          update: {
-            lid: isLid(rawChatId) ? rawChatId : undefined,
-            pushName: pushName || undefined,
-          },
+        const existingByPhone = await prisma.contact.findFirst({
+          where: { phone },
         });
+        if (existingByPhone) {
+          mappedContact = await prisma.contact.update({
+            where: { id: existingByPhone.id },
+            data: {
+              jid: chatId,
+              lid: isLid(rawChatId) ? rawChatId : existingByPhone.lid,
+              pushName: pushName || undefined,
+            },
+          });
+        } else {
+          mappedContact = await prisma.contact.upsert({
+            where: { jid: chatId },
+            create: {
+              phone,
+              jid: chatId,
+              lid: isLid(rawChatId) ? rawChatId : null,
+              pushName,
+              name: defaultDisplayName,
+              isWAUser: true,
+            },
+            update: {
+              lid: isLid(rawChatId) ? rawChatId : undefined,
+              pushName: pushName || undefined,
+            },
+          });
+        }
       } else if (mappedContact && pushName && (!mappedContact.name || mappedContact.name === phone)) {
         mappedContact = await prisma.contact.update({
           where: { id: mappedContact.id },

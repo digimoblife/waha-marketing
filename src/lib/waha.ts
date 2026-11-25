@@ -149,6 +149,7 @@ export const waha = {
   },
 
   async sendText(chatId: string, text: string, replyTo?: string, session = DEFAULT_SESSION) {
+    const hasLink = /(https?:\/\/[^\s]+|www\.[^\s]+)/i.test(text);
     const res = await fetch(`${WAHA_URL}/api/sendText`, {
       method: 'POST',
       headers: getHeaders({ 'Content-Type': 'application/json' }),
@@ -157,6 +158,7 @@ export const waha = {
         chatId,
         text,
         reply_to: replyTo,
+        linkPreview: hasLink ? true : undefined,
       }),
     });
     return await res.json();
