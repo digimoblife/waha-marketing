@@ -204,15 +204,20 @@ export async function POST(req: NextRequest) {
     if (mediaUrl) {
       let fileToSend = dockerUrl || mediaUrl;
 
-      // If this is a local uploaded file, convert to base64 Data URL so WAHA receives the file
-      // directly in-memory without making an external HTTP fetch that might fail or 404!
+      // For local files <= 5MB (images/small docs), convert to base64 Data URL so WAHA receives
+      // bytes directly without an HTTP fetch. For larger files (> 5MB, e.g. videos), stream via
+      // dockerUrl (/uploads/[...path]) to avoid Node.js RAM spikes and large JSON timeouts.
+      const MAX_BASE64_BYTES = 5 * 1024 * 1024;
       if (typeof mediaUrl === 'string' && mediaUrl.startsWith('/uploads/')) {
         try {
           const localFilePath = path.join(process.cwd(), 'public', mediaUrl.replace(/^\//, ''));
-          const fileBuf = await fs.readFile(localFilePath);
-          const b64 = fileBuf.toString('base64');
-          const finalMime = mimeType || (mediaType === 'image' ? 'image/jpeg' : mediaType === 'video' ? 'video/mp4' : 'application/octet-stream');
-          fileToSend = `data:${finalMime};base64,${b64}`;
+          const stat = await fs.stat(localFilePath);
+          if (stat.size <= MAX_BASE64_BYTES) {
+            const fileBuf = await fs.readFile(localFilePath);
+            const b64 = fileBuf.toString('base64');
+            const finalMime = mimeType || (mediaType === 'image' ? 'image/jpeg' : mediaType === 'video' ? 'video/mp4' : 'application/octet-stream');
+            fileToSend = `data:${finalMime};base64,${b64}`;
+          }
         } catch (readErr) {
           console.warn('[Message] Could not read local media file for data URL:', readErr);
         }

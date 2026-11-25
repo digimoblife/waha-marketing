@@ -64,6 +64,9 @@ export function isWahaInternalMediaUrl(url?: string | null): boolean {
   );
 }
 
+// Cache permanently expired (404/410) WAHA temporary file URLs so polling never retries them endlessly
+const permanentlyFailedWahaUrls = new Set<string>();
+
 /**
  * Downloads a media file from WAHA's internal /api/files endpoint
  * and persists it into local public/uploads so browsers can render it directly.
@@ -71,6 +74,7 @@ export function isWahaInternalMediaUrl(url?: string | null): boolean {
 export async function downloadWahaMedia(rawUrl: string): Promise<string | null> {
   if (!rawUrl) return null;
   if (rawUrl.startsWith('/uploads/')) return rawUrl;
+  if (permanentlyFailedWahaUrls.has(rawUrl)) return null;
 
   try {
     let fetchUrl = rawUrl.trim();
@@ -106,6 +110,9 @@ export async function downloadWahaMedia(rawUrl: string): Promise<string | null> 
 
     const res = await fetch(fetchUrl, { headers });
     if (!res.ok) {
+      if (res.status === 404 || res.status === 410) {
+        permanentlyFailedWahaUrls.add(rawUrl);
+      }
       console.warn(`[WAHA Media] Failed to download ${fetchUrl}: HTTP ${res.status}`);
       return null;
     }
