@@ -40,11 +40,13 @@ export async function GET(req: NextRequest) {
       data: { unreadCount: 0 },
     }).catch(() => null);
 
-    const rawMessages = await prisma.message.findMany({
+    // Fetch the NEWEST 200 messages (desc), then reverse to ascending order for display
+    const newestMessages = await prisma.message.findMany({
       where: { chatId },
-      orderBy: { timestamp: 'asc' },
+      orderBy: { timestamp: 'desc' },
       take: 200,
     });
+    const rawMessages = newestMessages.reverse();
 
     // Deduplicate messages on the fly:
     // Two messages are duplicates if they share the same stanza ID or identical text/media within 10 seconds
@@ -194,6 +196,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Send via WAHA WhatsApp API (Text or File)
+    // Only pass valid WhatsApp message IDs as reply_to (skip local fallback out_* IDs)
+    const wahaReplyTo =
+      replyTo && !String(replyTo).startsWith('out_') ? replyTo : undefined;
+
     let wahaRes: any;
     if (mediaUrl) {
       let fileToSend = dockerUrl || mediaUrl;
@@ -216,21 +222,21 @@ export async function POST(req: NextRequest) {
         chatId,
         fileToSend,
         caption || undefined,
-        replyTo || undefined,
+        wahaReplyTo,
         fileName || undefined,
         mimeType || undefined
       );
-
-      // Validate WAHA response: If WAHA reported an error or non-200 status, throw error!
-      if (wahaRes?.error || wahaRes?.status >= 400 || (wahaRes?.statusCode && wahaRes.statusCode >= 400)) {
-        const errorMsg =
-          wahaRes?.error?.message ||
-          wahaRes?.message ||
-          (typeof wahaRes?.error === 'string' ? wahaRes.error : 'Gagal mengirim file ke WhatsApp');
-        throw new Error(errorMsg);
-      }
     } else {
-      wahaRes = await waha.sendText(chatId, text, replyTo);
+      wahaRes = await waha.sendText(chatId, text, wahaReplyTo);
+    }
+
+    // Validate WAHA response for both sendFile and sendText
+    if (wahaRes?.error || wahaRes?.status >= 400 || (wahaRes?.statusCode && wahaRes.statusCode >= 400)) {
+      const errorMsg =
+        wahaRes?.error?.message ||
+        wahaRes?.message ||
+        (typeof wahaRes?.error === 'string' ? wahaRes.error : 'Gagal mengirim pesan ke WhatsApp');
+      throw new Error(errorMsg);
     }
 
     const stanzaId = wahaRes?.key?.id || wahaRes?.id || wahaRes?._data?.id;

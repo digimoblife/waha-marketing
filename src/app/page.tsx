@@ -27,6 +27,11 @@ export default function Home() {
   const [syncing, setSyncing] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  const activeChatIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
+
   // Fetch current user
   useEffect(() => {
     fetch('/api/auth/me')
@@ -127,23 +132,22 @@ export default function Home() {
     try {
       const res = await fetch(`/api/messages?chatId=${encodeURIComponent(chatId)}`);
       const data = await res.json();
+      // Ignore stale response if user switched to another chat while request was in flight
+      if (activeChatIdRef.current !== chatId) return;
+
       if (data.messages) {
         setMessages((prev) => {
-          // If message list hasn't changed, return prev to prevent re-renders
-          if (prev.length === data.messages.length) {
-            const prevLast = prev[prev.length - 1];
-            const nextLast = data.messages[data.messages.length - 1];
-            if (prevLast?.id === nextLast?.id && prevLast?.ackStatus === nextLast?.ackStatus) {
-              return prev;
-            }
-          }
-          return data.messages;
+          const prevKey = prev.map((m) => `${m.id}:${m.ackStatus}:${m.mediaUrl || ''}`).join('|');
+          const nextKey = data.messages
+            .map((m: any) => `${m.id}:${m.ackStatus}:${m.mediaUrl || ''}`)
+            .join('|');
+          return prevKey === nextKey ? prev : data.messages;
         });
       }
     } catch (err) {
       console.error('Fetch messages error:', err);
     } finally {
-      if (!isSilent) setLoadingMessages(false);
+      if (!isSilent && activeChatIdRef.current === chatId) setLoadingMessages(false);
     }
   }, []);
 
@@ -175,6 +179,7 @@ export default function Home() {
   }, [selectedChatId, fetchMessages]);
 
   const handleSelectChat = useCallback(async (chatId: string) => {
+    activeChatIdRef.current = chatId;
     setSelectedChatId(chatId);
     setMessages([]); // clear previous chat immediately
     setActiveTab('chats');
@@ -189,11 +194,10 @@ export default function Home() {
         body: JSON.stringify({ chatId }),
       });
       fetchChats();
-      fetchMessages(chatId, false);
     } catch (err) {
       console.error('Select chat error:', err);
     }
-  }, [fetchChats, fetchMessages]);
+  }, [fetchChats]);
 
   // Support direct URL query parameter ?phone=xxx or ?jid=xxx (e.g. from Admin Merchant database)
   useEffect(() => {
@@ -248,21 +252,24 @@ export default function Home() {
       });
 
       const data = await res.json();
-      if (data.message) {
-        setMessages((prev) => {
-          const newMsgStanza = (data.message.id || '').split('_').pop();
-          const exists = prev.some((m) => {
-            if (m.id === data.message.id) return true;
-            const mStanza = (m.id || '').split('_').pop();
-            return newMsgStanza && mStanza && newMsgStanza === mStanza;
-          });
-          if (exists) return prev;
-          return [...prev, data.message];
-        });
-        fetchChats();
+      if (!res.ok || !data.message) {
+        throw new Error(data.error || 'Gagal mengirim pesan');
       }
+
+      setMessages((prev) => {
+        const newMsgStanza = (data.message.id || '').split('_').pop();
+        const exists = prev.some((m) => {
+          if (m.id === data.message.id) return true;
+          const mStanza = (m.id || '').split('_').pop();
+          return newMsgStanza && mStanza && newMsgStanza === mStanza;
+        });
+        if (exists) return prev;
+        return [...prev, data.message];
+      });
+      fetchChats();
     } catch (err) {
       console.error('Send error:', err);
+      throw err;
     }
   };
 

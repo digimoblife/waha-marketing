@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sanitizePhone, phoneToJid } from '@/lib/phone';
+import { sanitizePhone, phoneToJid, normalizeJid, jidToPhone } from '@/lib/phone';
 import { waha } from '@/lib/waha';
 import { createLog } from '@/lib/logger';
 
@@ -60,24 +60,36 @@ export async function POST(req: NextRequest) {
       let createdCount = 0;
 
       for (const c of wahaContacts) {
-        if (!c.id || c.id.endsWith('@g.us')) continue;
-        const phone = sanitizePhone(c.id.replace(/@c\.us$/, ''));
+        if (!c.id || c.id.endsWith('@g.us') || c.id.endsWith('@lid')) continue;
+        const normalizedJid = normalizeJid(c.id);
+        const phone = sanitizePhone(jidToPhone(normalizedJid));
         if (!phone) continue;
 
-        await prisma.contact.upsert({
-          where: { jid: c.id },
-          create: {
-            phone,
-            jid: c.id,
-            name: c.name || c.pushname || phone,
-            pushName: c.pushname || null,
-            isWAUser: true,
-          },
-          update: {
-            name: c.name || undefined,
-            pushName: c.pushname || undefined,
-          },
+        const canonicalJid = phoneToJid(phone);
+        const existing = await prisma.contact.findFirst({
+          where: { OR: [{ jid: canonicalJid }, { phone }] },
         });
+
+        if (existing) {
+          await prisma.contact.update({
+            where: { id: existing.id },
+            data: {
+              jid: canonicalJid,
+              name: c.name || undefined,
+              pushName: c.pushname || undefined,
+            },
+          });
+        } else {
+          await prisma.contact.create({
+            data: {
+              phone,
+              jid: canonicalJid,
+              name: c.name || c.pushname || phone,
+              pushName: c.pushname || null,
+              isWAUser: true,
+            },
+          });
+        }
         createdCount++;
       }
 

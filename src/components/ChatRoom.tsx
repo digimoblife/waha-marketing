@@ -206,6 +206,9 @@ export default function ChatRoom({
         text: messageText,
         replyTo: replyMsgId,
       });
+    } catch (err: any) {
+      setText(messageText);
+      alert(`Gagal mengirim pesan: ${err?.message || 'Terjadi kesalahan'}`);
     } finally {
       setSending(false);
     }
@@ -215,6 +218,23 @@ export default function ChatRoom({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendText();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          setSelectedFile(file);
+          setFileCaption(text.trim());
+          setFilePreviewUrl(URL.createObjectURL(file));
+          return;
+        }
+      }
     }
   };
 
@@ -911,6 +931,7 @@ export default function ChatRoom({
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder={replyingTo ? 'Ketik balasan Anda...' : 'Ketik pesan (Enter kirim, Shift+Enter baris baru)...'}
               className="w-full text-xs sm:text-sm text-gray-800 placeholder-gray-400 bg-transparent resize-none focus:outline-none max-h-32 leading-5"
             />
