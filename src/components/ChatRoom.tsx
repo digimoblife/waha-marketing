@@ -33,6 +33,8 @@ import {
   Calendar,
   ExternalLink,
   Globe,
+  ChevronDown,
+  WifiOff,
 } from 'lucide-react';
 import { formatDisplayPhone, isLid } from '@/lib/phone';
 import { formatAccountDate } from '@/lib/date';
@@ -57,6 +59,8 @@ interface ChatRoomProps {
   onClearChat?: (mode: 'clear_messages' | 'delete_chat') => void;
   onMergeSuccess?: (targetJid: string) => void;
   loadingMessages: boolean;
+  sessionStatus?: string;
+  onOpenQR?: () => void;
 }
 
 export default function ChatRoom({
@@ -68,9 +72,18 @@ export default function ChatRoom({
   onClearChat,
   onMergeSuccess,
   loadingMessages,
+  sessionStatus = 'WORKING',
+  onOpenQR,
 }: ChatRoomProps) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`waha_draft_${chatId}`) || '';
+    }
+    return '';
+  });
   const [sending, setSending] = useState(false);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [customName, setCustomName] = useState('');
   const [currentDisplayName, setCurrentDisplayName] = useState('');
@@ -97,9 +110,22 @@ export default function ChatRoom({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  // Persist draft message per chatId in localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const key = `waha_draft_${chatId}`;
+    if (text.trim()) {
+      localStorage.setItem(key, text);
+    } else {
+      localStorage.removeItem(key);
+    }
+  }, [text, chatId]);
 
   const EMOJI_CATEGORIES = [
     {
@@ -180,14 +206,75 @@ export default function ChatRoom({
     setCustomName(cleanName);
   }, [chatData, chatId]);
 
-  // Scroll to bottom only when new message arrives or chat opens
+  // Smart auto-scroll: instant on initial load, smooth only if user is at bottom or sent the message
   const prevCountRef = useRef(0);
   useEffect(() => {
-    if (messages.length > prevCountRef.current || prevCountRef.current === 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length === 0) {
+      prevCountRef.current = 0;
+      return;
+    }
+
+    if (prevCountRef.current === 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      isAtBottomRef.current = true;
+      setShowScrollBottom(false);
+    } else if (messages.length > prevCountRef.current) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg?.fromMe || isAtBottomRef.current) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        setShowScrollBottom(true);
+      }
     }
     prevCountRef.current = messages.length;
   }, [messages]);
+
+  const handleMessagesScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distanceFromBottom < 80;
+    isAtBottomRef.current = atBottom;
+    setShowScrollBottom(!atBottom);
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    isAtBottomRef.current = true;
+    setShowScrollBottom(false);
+  };
+
+  const scrollToQuotedMessage = (quotedMsgId?: string | null) => {
+    if (!quotedMsgId) return;
+    const stanza = quotedMsgId.includes('_') ? quotedMsgId.split('_').pop() || quotedMsgId : quotedMsgId;
+    const target = messages.find(
+      (msg) => msg.id === quotedMsgId || (stanza && typeof msg.id === 'string' && msg.id.endsWith(stanza))
+    );
+    if (!target) return;
+    const el = document.getElementById(`msg-${target.id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedMsgId(target.id);
+      setTimeout(() => {
+        setHighlightedMsgId((prev) => (prev === target.id ? null : prev));
+      }, 1800);
+    }
+  };
+
+  const getDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return 'Hari Ini';
+    if (date.toDateString() === yesterday.toDateString()) return 'Kemarin';
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
 
   // Handle standard text send
   const handleSendText = async (e?: React.FormEvent) => {
@@ -626,8 +713,33 @@ export default function ChatRoom({
         </div>
       )}
 
+      {/* Offline / Disconnected Connection Warning Banner */}
+      {sessionStatus && sessionStatus !== 'WORKING' && (
+        <div className="bg-rose-50 border-b border-rose-200 px-4 py-2 flex items-center justify-between gap-2 text-xs text-rose-900 z-10 shrink-0 shadow-xs">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>
+              Koneksi WhatsApp terputus (<strong>{sessionStatus}</strong>). Pesan tidak dapat dikirim sampai terhubung kembali.
+            </span>
+          </div>
+          {onOpenQR && (
+            <button
+              type="button"
+              onClick={onOpenQR}
+              className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-[11px] transition shrink-0 cursor-pointer"
+            >
+              Hubungkan
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Message Bubbles Body */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleMessagesScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-2 relative"
+      >
         {loadingMessages && messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-gray-500">
             <span>Memuat pesan...</span>
@@ -645,48 +757,77 @@ export default function ChatRoom({
             </p>
           </div>
         ) : (
-          messages.map((m) => {
+          messages.map((m, idx) => {
             const isMe = m.fromMe;
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const showDateDivider =
+              !prevMsg ||
+              new Date(m.timestamp).toDateString() !== new Date(prevMsg.timestamp).toDateString();
+            const isHighlighted = highlightedMsgId === m.id;
+            const isGroupChat = chatId.endsWith('@g.us');
+
             return (
-              <div
-                key={m.id}
-                className={`flex group items-end gap-1.5 ${isMe ? 'justify-end' : 'justify-start'}`}
-              >
-                {/* Reply button on hover for incoming messages */}
-                {!isMe && (
-                  <button
-                    onClick={() => startReply(m)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 rounded-full text-gray-500 transition mb-1 shrink-0 cursor-pointer"
-                    title="Balas pesan ini"
-                  >
-                    <Reply className="w-3.5 h-3.5" />
-                  </button>
+              <React.Fragment key={m.id}>
+                {showDateDivider && (
+                  <div className="flex justify-center my-3">
+                    <span className="bg-white/90 text-gray-600 text-[11px] font-medium px-3 py-1 rounded-lg shadow-xs select-none border border-gray-100">
+                      {getDateLabel(m.timestamp)}
+                    </span>
+                  </div>
                 )}
 
                 <div
-                  className={`max-w-[80%] sm:max-w-md rounded-lg p-1.5 shadow-sm text-sm relative break-words select-text ${
-                    isMe
-                      ? 'bg-[#D9FDD3] text-gray-900 rounded-tr-none'
-                      : 'bg-white text-gray-900 rounded-tl-none'
-                  }`}
+                  id={`msg-${m.id}`}
+                  className={`flex group items-end gap-1.5 transition-all duration-300 rounded-xl px-1 py-0.5 ${
+                    isMe ? 'justify-end' : 'justify-start'
+                  } ${isHighlighted ? 'ring-2 ring-[#128C7E]/60 bg-[#128C7E]/10' : ''}`}
                 >
-                  {/* Quoted Message Card */}
-                  {m.quotedBody && (
-                    <div
-                      className={`mb-1.5 rounded px-2.5 py-1 text-xs border-l-[3.5px] select-none ${
-                        isMe
-                          ? 'bg-[#075E54]/5 border-[#075E54]'
-                          : 'bg-gray-100 border-[#128C7E]'
-                      }`}
+                  {/* Reply button on hover for incoming messages */}
+                  {!isMe && (
+                    <button
+                      onClick={() => startReply(m)}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/10 rounded-full text-gray-500 transition mb-1 shrink-0 cursor-pointer"
+                      title="Balas pesan ini"
                     >
-                      <span className="font-semibold block text-[11px] text-[#075E54] leading-tight mb-0.5">
-                        {m.quotedSender || (isMe ? 'Anda' : currentDisplayName)}
-                      </span>
-                      <p className="line-clamp-2 text-[11.5px] text-gray-600 leading-snug">
-                        {m.quotedBody}
-                      </p>
-                    </div>
+                      <Reply className="w-3.5 h-3.5" />
+                    </button>
                   )}
+
+                  <div
+                    className={`max-w-[80%] sm:max-w-md rounded-lg p-1.5 shadow-sm text-sm relative break-words select-text ${
+                      isMe
+                        ? 'bg-[#D9FDD3] text-gray-900 rounded-tr-none'
+                        : 'bg-white text-gray-900 rounded-tl-none'
+                    }`}
+                  >
+                    {/* Group Chat Sender Name */}
+                    {isGroupChat && !isMe && m.senderName && (
+                      <div className="px-1 pt-0.5 pb-1 text-[11px] font-semibold text-[#128C7E]">
+                        {m.senderName}
+                      </div>
+                    )}
+
+                    {/* Quoted Message Card (click to jump to original message) */}
+                    {m.quotedBody && (
+                      <div
+                        onClick={() => scrollToQuotedMessage(m.quotedMsgId)}
+                        title={m.quotedMsgId ? 'Klik untuk melihat pesan asli' : undefined}
+                        className={`mb-1.5 rounded px-2.5 py-1 text-xs border-l-[3.5px] select-none transition ${
+                          m.quotedMsgId ? 'cursor-pointer hover:brightness-95' : ''
+                        } ${
+                          isMe
+                            ? 'bg-[#075E54]/5 border-[#075E54]'
+                            : 'bg-gray-100 border-[#128C7E]'
+                        }`}
+                      >
+                        <span className="font-semibold block text-[11px] text-[#075E54] leading-tight mb-0.5">
+                          {m.quotedSender || (isMe ? 'Anda' : currentDisplayName)}
+                        </span>
+                        <p className="line-clamp-2 text-[11.5px] text-gray-600 leading-snug">
+                          {m.quotedBody}
+                        </p>
+                      </div>
+                    )}
 
                   {/* MEDIA RENDERING: IMAGE */}
                   {m.mediaType === 'image' && m.mediaUrl && (
@@ -827,10 +968,23 @@ export default function ChatRoom({
                   </button>
                 )}
               </div>
+              </React.Fragment>
             );
           })
         )}
         <div ref={messagesEndRef} />
+
+        {/* Floating Scroll-to-Bottom Button */}
+        {showScrollBottom && (
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            title="Gulir ke pesan terbaru"
+            className="sticky bottom-3 left-full ml-auto w-9 h-9 rounded-full bg-white hover:bg-gray-50 text-gray-600 shadow-lg border border-gray-200 flex items-center justify-center transition z-20 cursor-pointer"
+          >
+            <ChevronDown className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Input Message Footer */}

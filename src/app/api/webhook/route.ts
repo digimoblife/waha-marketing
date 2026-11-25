@@ -345,6 +345,7 @@ export async function POST(req: NextRequest) {
             quotedMsgId,
             quotedBody,
             quotedSender,
+            senderName: chatId.endsWith('@g.us') && !fromMe ? (pushName || data._data?.key?.participant || null) : null,
             timestamp,
           },
         });

@@ -376,6 +376,8 @@ export default function Home() {
             fetchContacts();
           }}
           loadingMessages={loadingMessages}
+          sessionStatus={sessionStatus}
+          onOpenQR={() => setIsQROpen(true)}
         />
       ) : (
         /* Empty State Screen */

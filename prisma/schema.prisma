@@ -68,6 +68,7 @@ model Message {
   quotedMsgId  String?
   quotedBody   String?  // Snippet of quoted message
   quotedSender String?  // Sender name of quoted message (e.g. "Anda" or "Rizky")
+  senderName   String?  // Sender display name (especially useful for group chats)
   timestamp    DateTime @default(now())
 
   @@index([chatId, timestamp])
