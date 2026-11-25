@@ -6,6 +6,7 @@ import { waha } from '@/lib/waha';
 import { sanitizePhone, normalizeJid } from '@/lib/phone';
 import { createLog } from '@/lib/logger';
 import { markMessageProcessed, extractStanzaId } from '@/lib/msg-cache';
+import { detectMediaType, downloadWahaMedia, isWahaInternalMediaUrl } from '@/lib/waha-media';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +76,27 @@ export async function GET(req: NextRequest) {
       prisma.message.deleteMany({
         where: { id: { in: duplicateIdsToDelete } },
       }).catch(() => null);
+    }
+
+    // Auto-heal any existing messages that still point to WAHA internal localhost:3000/api/files/
+    for (const msg of dedupedMessages) {
+      if (msg.mediaUrl && isWahaInternalMediaUrl(msg.mediaUrl)) {
+        const localUrl = await downloadWahaMedia(msg.mediaUrl);
+        if (localUrl) {
+          const fixedType =
+            msg.mediaType === 'document'
+              ? detectMediaType(null, localUrl, msg.fileName)
+              : msg.mediaType;
+          msg.mediaUrl = localUrl;
+          msg.mediaType = fixedType;
+          prisma.message
+            .update({
+              where: { id: msg.id },
+              data: { mediaUrl: localUrl, mediaType: fixedType },
+            })
+            .catch(() => null);
+        }
+      }
     }
 
     return NextResponse.json({ messages: dedupedMessages });

@@ -4,6 +4,7 @@ import { sanitizePhone, isLid, normalizeJid, jidToPhone } from '@/lib/phone';
 import { resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
 import { isMessageProcessed, markMessageProcessed, extractStanzaId } from '@/lib/msg-cache';
+import { detectMediaType, downloadWahaMedia, isWahaInternalMediaUrl } from '@/lib/waha-media';
 
 /**
  * WAHA Webhook Handler
@@ -187,14 +188,19 @@ export async function POST(req: NextRequest) {
       const rawPhone = (resolvedPhone || chatId).replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, '');
       const phone = isLid(chatId) ? rawPhone : sanitizePhone(rawPhone);
       
-      // Media detection
-      let mediaType = 'text';
-      if (data.hasMedia || data.type === 'image' || data.type === 'video' || data.type === 'audio' || data.type === 'document') {
-        mediaType = data.type || (data._data?.mimetype?.startsWith('image/') ? 'image' : data._data?.mimetype?.startsWith('video/') ? 'video' : 'document');
+      // Media detection & local persistence
+      const rawMediaUrl = data.mediaUrl || data._data?.mediaUrl || data.media?.url || null;
+      const fileName = data.filename || data._data?.filename || data.media?.filename || null;
+      const mediaType = detectMediaType(data, rawMediaUrl, fileName);
+
+      let mediaUrl = rawMediaUrl;
+      if (rawMediaUrl && isWahaInternalMediaUrl(rawMediaUrl)) {
+        const localUrl = await downloadWahaMedia(rawMediaUrl);
+        if (localUrl) {
+          mediaUrl = localUrl;
+        }
       }
 
-      const mediaUrl = data.mediaUrl || data._data?.mediaUrl || data.media?.url || null;
-      const fileName = data.filename || data._data?.filename || null;
       const timestamp = data.timestamp ? new Date(data.timestamp * 1000) : new Date();
 
       // Extract Reply / Quoted Context
