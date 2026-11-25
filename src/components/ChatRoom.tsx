@@ -310,7 +310,7 @@ export default function ChatRoom({
   const handleSaveName = async () => {
     if (!customName.trim()) return;
     try {
-      await fetch('/api/contacts', {
+      const res = await fetch('/api/contacts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -318,10 +318,13 @@ export default function ChatRoom({
           name: customName.trim(),
         }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan nama');
       setCurrentDisplayName(customName.trim());
       setEditingName(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update name:', err);
+      alert(`Gagal menyimpan nama: ${err?.message || 'Terjadi kesalahan'}`);
     }
   };
 

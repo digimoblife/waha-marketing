@@ -218,14 +218,34 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      wahaRes = await waha.sendFile(
-        chatId,
-        fileToSend,
-        caption || undefined,
-        wahaReplyTo,
-        fileName || undefined,
-        mimeType || undefined
-      );
+      if (mediaType === 'image') {
+        wahaRes = await waha.sendImage(
+          chatId,
+          fileToSend,
+          caption || undefined,
+          wahaReplyTo,
+          fileName || undefined,
+          mimeType || undefined
+        );
+      } else if (mediaType === 'video') {
+        wahaRes = await waha.sendVideo(
+          chatId,
+          fileToSend,
+          caption || undefined,
+          wahaReplyTo,
+          fileName || undefined,
+          mimeType || undefined
+        );
+      } else {
+        wahaRes = await waha.sendFile(
+          chatId,
+          fileToSend,
+          caption || undefined,
+          wahaReplyTo,
+          fileName || undefined,
+          mimeType || undefined
+        );
+      }
     } else {
       wahaRes = await waha.sendText(chatId, text, wahaReplyTo);
     }

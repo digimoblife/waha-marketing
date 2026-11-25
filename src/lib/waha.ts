@@ -164,6 +164,60 @@ export const waha = {
     return await res.json();
   },
 
+  async sendImage(
+    chatId: string,
+    fileUrl: string,
+    caption?: string,
+    replyTo?: string,
+    filename?: string,
+    mimetype?: string,
+    session = DEFAULT_SESSION
+  ) {
+    const filePayload: any = { url: fileUrl };
+    if (filename) filePayload.filename = filename;
+    if (mimetype) filePayload.mimetype = mimetype;
+
+    const res = await fetch(`${WAHA_URL}/api/sendImage`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        session,
+        chatId,
+        file: filePayload,
+        caption,
+        reply_to: replyTo,
+      }),
+    });
+    return await res.json();
+  },
+
+  async sendVideo(
+    chatId: string,
+    fileUrl: string,
+    caption?: string,
+    replyTo?: string,
+    filename?: string,
+    mimetype?: string,
+    session = DEFAULT_SESSION
+  ) {
+    const filePayload: any = { url: fileUrl };
+    if (filename) filePayload.filename = filename;
+    if (mimetype) filePayload.mimetype = mimetype;
+
+    const res = await fetch(`${WAHA_URL}/api/sendVideo`, {
+      method: 'POST',
+      headers: getHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        session,
+        chatId,
+        file: filePayload,
+        caption,
+        reply_to: replyTo,
+      }),
+    });
+    return await res.json();
+  },
+
   async sendFile(
     chatId: string,
     fileUrl: string,

@@ -166,33 +166,43 @@ export async function POST(req: NextRequest) {
 
       if (isWAUser) results.activeWA++;
 
-      const saved = await prisma.contact.upsert({
-        where: { jid },
-        create: {
-          phone,
-          jid,
-          name: name || storeName || phone,
-          storeName: storeName || null,
-          businessCategory: businessCategory || null,
-          email: email || null,
-          accountCreatedAt: accountCreatedAt || null,
-          address: address || null,
-          isWAUser,
-          tags: rowTag || null,
-          notes: notes || null,
-        },
-        update: {
-          name: name || undefined,
-          storeName: storeName || undefined,
-          businessCategory: businessCategory || undefined,
-          email: email || undefined,
-          accountCreatedAt: accountCreatedAt || undefined,
-          address: address || undefined,
-          tags: rowTag || undefined,
-          notes: notes || undefined,
-          isWAUser,
+      const existing = await prisma.contact.findFirst({
+        where: {
+          OR: [{ jid }, { phone }],
         },
       });
+
+      const saved = existing
+        ? await prisma.contact.update({
+            where: { id: existing.id },
+            data: {
+              jid,
+              name: name || undefined,
+              storeName: storeName || undefined,
+              businessCategory: businessCategory || undefined,
+              email: email || undefined,
+              accountCreatedAt: accountCreatedAt || undefined,
+              address: address || undefined,
+              tags: rowTag || undefined,
+              notes: notes || undefined,
+              isWAUser,
+            },
+          })
+        : await prisma.contact.create({
+            data: {
+              phone,
+              jid,
+              name: name || storeName || phone,
+              storeName: storeName || null,
+              businessCategory: businessCategory || null,
+              email: email || null,
+              accountCreatedAt: accountCreatedAt || null,
+              address: address || null,
+              isWAUser,
+              tags: rowTag || null,
+              notes: notes || null,
+            },
+          });
 
       results.success++;
       results.contacts.push({

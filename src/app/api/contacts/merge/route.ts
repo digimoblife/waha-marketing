@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { normalizeJid } from '@/lib/phone';
 
 export const dynamic = 'force-dynamic';
+
+function formatMessageSnippet(msg: {
+  body: string | null;
+  mediaType: string | null;
+  fileName: string | null;
+}): string | null {
+  if (msg.mediaType === 'image') return msg.body ? `📷 ${msg.body}` : '📷 Foto';
+  if (msg.mediaType === 'video') return msg.body ? `🎬 ${msg.body}` : '🎬 Video';
+  if (msg.mediaType === 'audio') return '🎵 Audio';
+  if (msg.mediaType === 'document') return msg.fileName ? `📄 ${msg.fileName}` : '📄 Dokumen';
+  return msg.body;
+}
 
 /**
  * Merge two contacts / chats:
@@ -10,7 +23,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest) {
   try {
-    const { sourceJid, targetJid } = await req.json();
+    const body = await req.json();
+    const sourceJid = normalizeJid(body.sourceJid || '');
+    const targetJid = normalizeJid(body.targetJid || '');
 
     if (!sourceJid || !targetJid) {
       return NextResponse.json(
@@ -23,85 +38,83 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Find both contacts
-    const sourceContact = await prisma.contact.findUnique({
-      where: { jid: sourceJid },
-    });
-    const targetContact = await prisma.contact.findUnique({
-      where: { jid: targetJid },
-    });
-
-    if (!targetContact) {
-      return NextResponse.json(
-        { error: 'Target contact tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-
-    // Clear source lid first to prevent unique constraint violation
-    if (sourceContact?.lid) {
-      await prisma.contact.update({
-        where: { id: sourceContact.id },
-        data: { lid: null },
+    await prisma.$transaction(async (tx) => {
+      const sourceContact = await tx.contact.findUnique({
+        where: { jid: sourceJid },
       });
-    }
-
-    // 1. Update target contact's lid if source was a LID
-    if (sourceJid.endsWith('@lid') || (sourceContact?.phone && sourceContact.phone.length === 15)) {
-      await prisma.contact.update({
-        where: { id: targetContact.id },
-        data: { lid: sourceJid },
+      const targetContact = await tx.contact.findUnique({
+        where: { jid: targetJid },
       });
-    }
 
-    // 2. Ensure target Chat exists
-    await prisma.chat.upsert({
-      where: { id: targetJid },
-      create: {
-        id: targetJid,
-        name: targetContact.name || targetContact.phone,
-        contactId: targetContact.id,
-      },
-      update: {
-        contactId: targetContact.id,
-      },
-    });
+      if (!targetContact) {
+        throw new Error('Target contact tidak ditemukan');
+      }
 
-    // 3. Move all messages from source chat to target chat
-    await prisma.message.updateMany({
-      where: { chatId: sourceJid },
-      data: {
-        chatId: targetJid,
-        contactId: targetContact.id,
-      },
-    });
+      // Clear source lid first to prevent unique constraint violation
+      if (sourceContact?.lid) {
+        await tx.contact.update({
+          where: { id: sourceContact.id },
+          data: { lid: null },
+        });
+      }
 
-    // 4. Update lastMessage and lastMessageAt on target chat from newest message
-    const latestMessage = await prisma.message.findFirst({
-      where: { chatId: targetJid },
-      orderBy: { timestamp: 'desc' },
-    });
+      // 1. Update target contact's lid if source was a LID
+      if (sourceJid.endsWith('@lid') || (sourceContact?.phone && sourceContact.phone.length === 15)) {
+        await tx.contact.update({
+          where: { id: targetContact.id },
+          data: { lid: sourceJid },
+        });
+      }
 
-    if (latestMessage) {
-      await prisma.chat.update({
+      // 2. Ensure target Chat exists
+      await tx.chat.upsert({
         where: { id: targetJid },
-        data: {
-          lastMessage: latestMessage.body,
-          lastMessageAt: latestMessage.timestamp,
+        create: {
+          id: targetJid,
+          name: targetContact.name || targetContact.phone,
+          contactId: targetContact.id,
+        },
+        update: {
+          contactId: targetContact.id,
         },
       });
-    }
 
-    // 5. Delete source chat and source contact
-    await prisma.chat.deleteMany({
-      where: { id: sourceJid },
-    });
-
-    if (sourceContact && sourceContact.id !== targetContact.id) {
-      await prisma.contact.delete({
-        where: { id: sourceContact.id },
+      // 3. Move all messages from source chat to target chat
+      await tx.message.updateMany({
+        where: { chatId: sourceJid },
+        data: {
+          chatId: targetJid,
+          contactId: targetContact.id,
+        },
       });
-    }
+
+      // 4. Update lastMessage and lastMessageAt on target chat from newest message
+      const latestMessage = await tx.message.findFirst({
+        where: { chatId: targetJid },
+        orderBy: { timestamp: 'desc' },
+      });
+
+      if (latestMessage) {
+        await tx.chat.update({
+          where: { id: targetJid },
+          data: {
+            lastMessage: formatMessageSnippet(latestMessage),
+            lastMessageAt: latestMessage.timestamp,
+          },
+        });
+      }
+
+      // 5. Delete source chat and source contact
+      await tx.chat.deleteMany({
+        where: { id: sourceJid },
+      });
+
+      if (sourceContact && sourceContact.id !== targetContact.id) {
+        await tx.contact.delete({
+          where: { id: sourceContact.id },
+        });
+      }
+    });
 
     return NextResponse.json({
       ok: true,
@@ -110,6 +123,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('Merge error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const status = err.message === 'Target contact tidak ditemukan' ? 404 : 500;
+    return NextResponse.json({ error: err.message }, { status });
   }
 }

@@ -157,7 +157,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      jid,
+      jid: rawJid,
       name,
       tags,
       notes,
@@ -168,29 +168,63 @@ export async function PATCH(req: NextRequest) {
       address,
     } = body;
 
-    if (!jid) {
+    if (!rawJid) {
       return NextResponse.json({ error: 'jid is required' }, { status: 400 });
     }
 
-    const contact = await prisma.contact.update({
-      where: { jid },
-      data: {
-        name: name !== undefined ? name : undefined,
-        tags: tags !== undefined ? tags : undefined,
-        notes: notes !== undefined ? notes : undefined,
-        storeName: storeName !== undefined ? storeName : undefined,
-        businessCategory: businessCategory !== undefined ? businessCategory : undefined,
-        email: email !== undefined ? email : undefined,
-        accountCreatedAt: accountCreatedAt !== undefined ? accountCreatedAt : undefined,
-        address: address !== undefined ? address : undefined,
+    const jid = normalizeJid(rawJid);
+    const phone = sanitizePhone(jidToPhone(jid));
+
+    let contact = await prisma.contact.findFirst({
+      where: {
+        OR: [
+          { jid },
+          ...(phone ? [{ phone }] : []),
+          { lid: jid },
+        ],
       },
     });
+
+    if (contact) {
+      contact = await prisma.contact.update({
+        where: { id: contact.id },
+        data: {
+          jid: jid.endsWith('@g.us') || jid.endsWith('@lid') ? contact.jid : jid,
+          name: name !== undefined ? name : undefined,
+          tags: tags !== undefined ? tags : undefined,
+          notes: notes !== undefined ? notes : undefined,
+          storeName: storeName !== undefined ? storeName : undefined,
+          businessCategory: businessCategory !== undefined ? businessCategory : undefined,
+          email: email !== undefined ? email : undefined,
+          accountCreatedAt: accountCreatedAt !== undefined ? accountCreatedAt : undefined,
+          address: address !== undefined ? address : undefined,
+        },
+      });
+    } else if (!jid.endsWith('@g.us') && phone) {
+      // Create contact record if chat existed without a Contact row
+      contact = await prisma.contact.create({
+        data: {
+          phone,
+          jid,
+          lid: jid.endsWith('@lid') ? jid : null,
+          name: name || phone,
+          tags: tags || null,
+          notes: notes || null,
+          storeName: storeName || null,
+          businessCategory: businessCategory || null,
+          email: email || null,
+          accountCreatedAt: accountCreatedAt || null,
+          address: address || null,
+          isWAUser: true,
+        },
+      });
+    }
 
     // Also update chat name if chat exists
     if (name) {
       await prisma.chat.updateMany({
         where: { id: jid },
-        data: { name },
+        data: { name, ...(contact ? { contactId: contact.id } : {}) },
       });
     }
 

@@ -140,16 +140,22 @@ export async function POST(req: NextRequest) {
 
       const text = data.body || (data._data && data._data.body) || '';
 
+      // Media detection & local persistence (needed early for captionless media dedup)
+      const rawMediaUrl = data.mediaUrl || data._data?.mediaUrl || data.media?.url || null;
+      const fileName = data.filename || data._data?.filename || data.media?.filename || null;
+      const mediaType = detectMediaType(data, rawMediaUrl, fileName);
+
       // Database check: verify if message already exists by msgId OR stanzaId OR serializedId
+      const safeStanza = stanzaId && stanzaId.length >= 8 ? stanzaId : '';
       const existingMsg = await prisma.message.findFirst({
         where: {
           OR: [
             { id: msgId },
-            ...(stanzaId ? [
-              { id: stanzaId },
-              { id: { endsWith: stanzaId } },
-              { id: `true_${chatId}_${stanzaId}` },
-              { id: `false_${chatId}_${stanzaId}` },
+            ...(safeStanza ? [
+              { id: safeStanza },
+              { id: { endsWith: safeStanza } },
+              { id: `true_${chatId}_${safeStanza}` },
+              { id: `false_${chatId}_${safeStanza}` },
             ] : []),
           ],
         },
@@ -160,19 +166,29 @@ export async function POST(req: NextRequest) {
       }
 
       // Outgoing message deduplication: If sent from our web UI in the last 15 seconds, avoid double-entry
-      if (fromMe && text) {
-        const recentDuplicate = await prisma.message.findFirst({
-          where: {
-            chatId,
-            fromMe: true,
-            body: text,
-            timestamp: {
-              gte: new Date(Date.now() - 15000),
-            },
-          },
-        });
+      if (fromMe) {
+        const recentDuplicate = text
+          ? await prisma.message.findFirst({
+              where: {
+                chatId,
+                fromMe: true,
+                body: text,
+                timestamp: { gte: new Date(Date.now() - 15000) },
+              },
+            })
+          : mediaType !== 'text'
+          ? await prisma.message.findFirst({
+              where: {
+                chatId,
+                fromMe: true,
+                mediaType,
+                timestamp: { gte: new Date(Date.now() - 15000) },
+              },
+            })
+          : null;
+
         if (recentDuplicate) {
-          console.log(`[Webhook] Outgoing message already recorded for chatId ${chatId}: ${text}`);
+          console.log(`[Webhook] Outgoing message already recorded for chatId ${chatId}`);
           return NextResponse.json({ ok: true, ignored: 'recent_outgoing_duplicate' });
         }
       }
@@ -188,11 +204,7 @@ export async function POST(req: NextRequest) {
       const rawPhone = (resolvedPhone || chatId).replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, '');
       const phone = isLid(chatId) ? rawPhone : sanitizePhone(rawPhone);
       
-      // Media detection & local persistence
-      const rawMediaUrl = data.mediaUrl || data._data?.mediaUrl || data.media?.url || null;
-      const fileName = data.filename || data._data?.filename || data.media?.filename || null;
-      const mediaType = detectMediaType(data, rawMediaUrl, fileName);
-
+      // Local persistence for WAHA internal media URL
       let mediaUrl = rawMediaUrl;
       if (rawMediaUrl && isWahaInternalMediaUrl(rawMediaUrl)) {
         const localUrl = await downloadWahaMedia(rawMediaUrl);
