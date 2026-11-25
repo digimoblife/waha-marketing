@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sanitizePhone, isLid } from '@/lib/phone';
+import { sanitizePhone, isLid, normalizeJid, jidToPhone } from '@/lib/phone';
 import { resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       setTimeout(() => processedMsgIds.delete(msgId), 60000);
 
       const fromMe = Boolean(data.fromMe);
-      const rawChatId =
+      let rawChatId =
         (fromMe
           ? (data.to || data._data?.key?.remoteJid || data.from)
           : (data.from || data._data?.key?.remoteJid)) || '';
@@ -51,6 +51,9 @@ export async function POST(req: NextRequest) {
         console.warn('[Webhook] Could not determine chatId from payload:', data);
         return NextResponse.json({ ok: true, ignored: 'no_chat_id' });
       }
+
+      // Immediately normalize rawChatId from @s.whatsapp.net to canonical @c.us
+      rawChatId = normalizeJid(rawChatId);
 
       // Database check: if message already exists, do not process again
       const existingMsg = await prisma.message.findUnique({
@@ -66,16 +69,37 @@ export async function POST(req: NextRequest) {
         resolvedPhone = resolveLidToPhone(rawChatId);
       }
 
+      const canonicalPhone = jidToPhone(rawChatId);
+      const canonicalJid = isLid(rawChatId)
+        ? rawChatId
+        : rawChatId.endsWith('@g.us')
+        ? rawChatId
+        : `${canonicalPhone}@c.us`;
+
       // Check if this rawChatId is already mapped to a contact!
       let mappedContact = await prisma.contact.findFirst({
         where: {
           OR: [
+            { jid: canonicalJid },
             { jid: rawChatId },
+            { phone: canonicalPhone },
             { lid: rawChatId },
             ...(resolvedPhone ? [{ phone: resolvedPhone }, { jid: `${resolvedPhone}@c.us` }] : []),
           ],
         },
       });
+
+      // If mappedContact's stored jid ends with @s.whatsapp.net, heal it to canonicalJid
+      if (mappedContact && mappedContact.jid.endsWith('@s.whatsapp.net')) {
+        try {
+          mappedContact = await prisma.contact.update({
+            where: { id: mappedContact.id },
+            data: { jid: canonicalJid },
+          });
+        } catch (e) {
+          console.warn('[Webhook] Could not update contact JID from @s.whatsapp.net to @c.us:', e);
+        }
+      }
 
       // If mappedContact exists and this is a LID, ensure the contact's lid field is saved
       if (mappedContact && isLid(rawChatId) && !mappedContact.lid) {
@@ -104,10 +128,22 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Canonical chat ID: use mapped contact's JID, or resolved phone JID, or fallback to rawChatId
+      // Canonical chat ID: use mapped contact's JID (normalized), or resolved phone JID, or fallback to canonicalJid
       const chatId = mappedContact
-        ? mappedContact.jid
-        : (resolvedPhone ? `${resolvedPhone}@c.us` : rawChatId);
+        ? normalizeJid(mappedContact.jid)
+        : (resolvedPhone ? `${resolvedPhone}@c.us` : canonicalJid);
+
+      // Auto-migrate any stray messages that were logged under @s.whatsapp.net for this number
+      if (chatId.endsWith('@c.us')) {
+        const straySNetId = `${canonicalPhone}@s.whatsapp.net`;
+        await prisma.message.updateMany({
+          where: { chatId: straySNetId },
+          data: { chatId },
+        }).catch(() => null);
+        await prisma.chat.deleteMany({
+          where: { id: straySNetId },
+        }).catch(() => null);
+      }
 
       // Look for real sender / pushName in all possible WAHA fields
       const pushName =
@@ -184,17 +220,17 @@ export async function POST(req: NextRequest) {
           mappedContact = await prisma.contact.update({
             where: { id: existingByPhone.id },
             data: {
-              jid: chatId,
+              jid: canonicalJid,
               lid: isLid(rawChatId) ? rawChatId : existingByPhone.lid,
               pushName: pushName || undefined,
             },
           });
         } else {
           mappedContact = await prisma.contact.upsert({
-            where: { jid: chatId },
+            where: { jid: canonicalJid },
             create: {
               phone,
-              jid: chatId,
+              jid: canonicalJid,
               lid: isLid(rawChatId) ? rawChatId : null,
               pushName,
               name: defaultDisplayName,

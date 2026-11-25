@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { waha } from '@/lib/waha';
-import { sanitizePhone } from '@/lib/phone';
+import { sanitizePhone, normalizeJid } from '@/lib/phone';
 import { createLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -10,10 +10,24 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const chatId = searchParams.get('chatId');
+    const rawChatId = searchParams.get('chatId');
 
-    if (!chatId) {
+    if (!rawChatId) {
       return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
+    }
+
+    const chatId = normalizeJid(rawChatId);
+
+    // Auto-heal: If any messages still have @s.whatsapp.net chatId, migrate them to canonical chatId
+    if (chatId.endsWith('@c.us')) {
+      const sNetId = chatId.replace(/@c\.us$/, '@s.whatsapp.net');
+      await prisma.message.updateMany({
+        where: { chatId: sNetId },
+        data: { chatId },
+      }).catch(() => null);
+      await prisma.chat.deleteMany({
+        where: { id: sNetId },
+      }).catch(() => null);
     }
 
     // Reset unreadCount for this chat because operator is viewing/fetching its messages
@@ -39,7 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      chatId,
+      chatId: rawChatId,
       text,
       replyTo,
       mediaUrl,
@@ -50,9 +64,11 @@ export async function POST(req: NextRequest) {
       caption,
     } = body;
 
-    if (!chatId) {
+    if (!rawChatId) {
       return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
     }
+
+    const chatId = normalizeJid(rawChatId);
 
     if (!text && !mediaUrl) {
       return NextResponse.json({ error: 'text or mediaUrl is required' }, { status: 400 });
@@ -61,16 +77,17 @@ export async function POST(req: NextRequest) {
     const timestamp = new Date();
 
     // 1. Find or associate contact
+    const phone = sanitizePhone(chatId.replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, ''));
     const contact = await prisma.contact.findFirst({
       where: {
         OR: [
           { jid: chatId },
+          { phone },
           { lid: chatId },
         ],
       },
     });
 
-    const phone = sanitizePhone(chatId.replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, ''));
     const displayName = contact?.name || contact?.pushName || phone;
 
     // Determine message display snippet for chat preview

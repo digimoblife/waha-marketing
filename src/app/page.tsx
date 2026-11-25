@@ -55,8 +55,33 @@ export default function Home() {
       const res = await fetch('/api/chats');
       const data = await res.json();
       if (data.chats) {
+        // Guard against duplicate chats (e.g. @s.whatsapp.net and @c.us for the same contact)
+        const dedupedMap = new Map<string, any>();
+        for (const chat of data.chats) {
+          const canonicalId = (chat.id || '').replace(/@s\.whatsapp\.net$/, '@c.us');
+          if (!dedupedMap.has(canonicalId)) {
+            dedupedMap.set(canonicalId, { ...chat, id: canonicalId });
+          } else {
+            const existing = dedupedMap.get(canonicalId);
+            const existingTime = new Date(existing.lastMessageAt || existing.updatedAt || 0).getTime();
+            const currTime = new Date(chat.lastMessageAt || chat.updatedAt || 0).getTime();
+            if (currTime >= existingTime) {
+              dedupedMap.set(canonicalId, {
+                ...chat,
+                id: canonicalId,
+                unreadCount: Math.max(existing.unreadCount || 0, chat.unreadCount || 0),
+              });
+            }
+          }
+        }
+        const cleanedChats = Array.from(dedupedMap.values()).sort((a, b) => {
+          const tA = new Date(a.lastMessageAt || a.updatedAt || 0).getTime();
+          const tB = new Date(b.lastMessageAt || b.updatedAt || 0).getTime();
+          return tB - tA;
+        });
+
         setChats((prev) => {
-          const chatsWithActive = data.chats.map((c: any) =>
+          const chatsWithActive = cleanedChats.map((c: any) =>
             c.id === selectedChatId ? { ...c, unreadCount: 0 } : c
           );
           const prevKey = prev.map((c) => `${c.id}-${c.lastMessage}-${c.unreadCount}`).join('|');

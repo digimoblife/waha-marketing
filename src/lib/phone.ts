@@ -22,16 +22,32 @@ export function sanitizePhone(rawPhone: string): string {
   return clean;
 }
 
+export function normalizeJid(rawJid: string): string {
+  if (!rawJid) return '';
+  let jid = rawJid.trim();
+  if (jid.endsWith('@s.whatsapp.net')) {
+    jid = jid.replace(/@s\.whatsapp\.net$/, '@c.us');
+  }
+  return jid;
+}
+
 export function phoneToJid(phone: string): string {
   const clean = sanitizePhone(phone);
   if (clean.endsWith('@c.us') || clean.endsWith('@g.us') || clean.endsWith('@lid')) {
     return clean;
   }
+  if (clean.endsWith('@s.whatsapp.net')) {
+    return clean.replace(/@s\.whatsapp\.net$/, '@c.us');
+  }
   return `${clean}@c.us`;
 }
 
 export function jidToPhone(jid: string): string {
-  return jid.replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, '');
+  return jid
+    .replace(/@c\.us$/, '')
+    .replace(/@s\.whatsapp\.net$/, '')
+    .replace(/@g\.us$/, '')
+    .replace(/@lid$/, '');
 }
 
 export function isLid(jidOrPhone: string): boolean {

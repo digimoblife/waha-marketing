@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sanitizePhone } from '@/lib/phone';
+import { sanitizePhone, normalizeJid } from '@/lib/phone';
 import { createLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // 1. Auto-heal any stray @s.whatsapp.net chats
+    const sNetChats = await prisma.chat.findMany({
+      where: { id: { endsWith: '@s.whatsapp.net' } },
+    });
+    for (const sc of sNetChats) {
+      const canonicalId = sc.id.replace(/@s\.whatsapp\.net$/, '@c.us');
+      await prisma.message.updateMany({
+        where: { chatId: sc.id },
+        data: { chatId: canonicalId },
+      });
+      await prisma.chat.delete({ where: { id: sc.id } }).catch(() => null);
+    }
+
+    // 2. Auto-heal any contacts saved with @s.whatsapp.net jid
+    const sNetContacts = await prisma.contact.findMany({
+      where: { jid: { endsWith: '@s.whatsapp.net' } },
+    });
+    for (const sc of sNetContacts) {
+      const canonicalJid = sc.jid.replace(/@s\.whatsapp\.net$/, '@c.us');
+      await prisma.contact.update({
+        where: { id: sc.id },
+        data: { jid: canonicalJid },
+      }).catch(() => null);
+    }
+
     const chats = await prisma.chat.findMany({
       include: {
         contact: true,
@@ -26,18 +51,25 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { chatId } = body;
+    const rawChatId = body.chatId;
 
-    if (!chatId) {
+    if (!rawChatId) {
       return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
     }
 
-    // Find contact if exists
-    const contact = await prisma.contact.findUnique({
-      where: { jid: chatId },
+    const chatId = normalizeJid(rawChatId);
+    const phone = sanitizePhone(chatId.replace(/@c\.us$/, '').replace(/@g\.us$/, ''));
+
+    // Find contact if exists by jid or phone
+    const contact = await prisma.contact.findFirst({
+      where: {
+        OR: [
+          { jid: chatId },
+          { phone },
+        ],
+      },
     });
 
-    const phone = sanitizePhone(chatId.replace(/@c\.us$/, '').replace(/@g\.us$/, ''));
     const displayName = contact?.name || contact?.pushName || phone;
 
     // Ensure Chat exists in database
@@ -70,23 +102,36 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const chatId = searchParams.get('chatId');
+    const rawChatId = searchParams.get('chatId');
     const mode = searchParams.get('mode') || 'clear_messages'; // 'clear_messages' | 'delete_chat'
 
-    if (!chatId) {
+    if (!rawChatId) {
       return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
     }
 
+    const chatId = normalizeJid(rawChatId);
+    const sNetId = chatId.endsWith('@c.us') ? chatId.replace(/@c\.us$/, '@s.whatsapp.net') : null;
+
     if (mode === 'delete_chat') {
-      // 1. Delete all messages for this chat
+      // 1. Delete all messages for this chat (both canonical and sNet if any)
       await prisma.message.deleteMany({
-        where: { chatId },
+        where: {
+          OR: [
+            { chatId },
+            ...(sNetId ? [{ chatId: sNetId }] : []),
+          ],
+        },
       });
 
-      // 2. Delete the chat record
-      await prisma.chat.delete({
-        where: { id: chatId },
-      }).catch(() => null);
+      // 2. Delete the chat record(s)
+      await prisma.chat.deleteMany({
+        where: {
+          OR: [
+            { id: chatId },
+            ...(sNetId ? [{ id: sNetId }] : []),
+          ],
+        },
+      });
 
       await createLog('CHAT_CLEARED', 'SUCCESS', `Obrolan ${chatId} dihapus sepenuhnya`);
 
@@ -98,7 +143,12 @@ export async function DELETE(req: NextRequest) {
     } else {
       // Clear messages only, retain chat thread
       const deleted = await prisma.message.deleteMany({
-        where: { chatId },
+        where: {
+          OR: [
+            { chatId },
+            ...(sNetId ? [{ chatId: sNetId }] : []),
+          ],
+        },
       });
 
       await prisma.chat.update({
