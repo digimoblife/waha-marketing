@@ -22,10 +22,13 @@ export function markMessageProcessed(id: string) {
   if (stanza && stanza !== id) {
     processedMsgIds.add(stanza);
   }
-  setTimeout(() => {
+  const timer = setTimeout(() => {
     processedMsgIds.delete(id);
     if (stanza) processedMsgIds.delete(stanza);
   }, 60000); // 60 seconds TTL
+  if (typeof timer.unref === 'function') {
+    timer.unref();
+  }
 }
 
 export function isMessageProcessed(id: string): boolean {
