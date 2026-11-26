@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, UserPlus, Phone, Tag, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { X, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { sanitizePhone, formatDisplayPhone } from '@/lib/phone';
 
 interface NewChatModalProps {
@@ -13,10 +13,10 @@ interface NewChatModalProps {
 export default function NewChatModal({ isOpen, onClose, onChatCreated }: NewChatModalProps) {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
+  const [storeName, setStoreName] = useState('');
   const [tags, setTags] = useState('');
-  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checkResult, setCheckResult] = useState<{ checked: boolean; exists: boolean } | null>(null);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
@@ -33,7 +33,6 @@ export default function NewChatModal({ isOpen, onClose, onChatCreated }: NewChat
 
     setLoading(true);
     setError('');
-
     try {
       const res = await fetch('/api/contacts', {
         method: 'POST',
@@ -41,164 +40,139 @@ export default function NewChatModal({ isOpen, onClose, onChatCreated }: NewChat
         body: JSON.stringify({
           phone: cleanNumber,
           name: name.trim() || undefined,
+          storeName: storeName.trim() || undefined,
           tags: tags.trim() || undefined,
-          notes: notes.trim() || undefined,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal menyimpan kontak');
-      }
+      if (!res.ok) throw new Error(data.error || 'Gagal menyimpan kontak');
 
-      setCheckResult({
-        checked: true,
-        exists: data.existsOnWhatsApp ?? true,
-      });
-
-      // Open the chat room
+      setDone(true);
       const chatId = `${cleanNumber}@c.us`;
       setTimeout(() => {
         onChatCreated(chatId);
         onClose();
-        // Reset form
         setPhone('');
         setName('');
+        setStoreName('');
         setTags('');
-        setNotes('');
-        setCheckResult(null);
-      }, 600);
+        setDone(false);
+      }, 400);
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat memproses');
+      setError(err.message || 'Terjadi kesalahan');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100">
-        {/* Header */}
-        <div className="bg-[#075E54] text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-wa-green" />
-            <h3 className="font-semibold text-lg">Mulai Chat Baru / Kontak</h3>
-          </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-[10px] shadow-2xl max-w-[440px] w-full overflow-hidden border border-[#B0C4CF]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3.5 border-b border-[#D1DEE5] flex items-center justify-between">
+          <h3 className="font-bold text-[14.5px] text-[#0F232E]">Mulai Obrolan Baru</h3>
           <button
+            type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition"
+            className="text-[#5C7685] hover:text-[#0F232E] p-1 rounded-md hover:bg-[#ECF6FA] cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 text-red-700 text-xs rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+        <form onSubmit={handleSubmit}>
+          <div className="p-4 space-y-3.5">
+            {error && (
+              <div className="p-2.5 bg-[#FDECEC] border border-[#F7B4B6] text-[#9E1F23] text-xs rounded-md flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          {/* Nomor HP */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Nomor WhatsApp <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            <div>
+              <label className="block text-xs font-semibold text-[#0F232E] mb-1">
+                Nomor WhatsApp <span className="text-[#9E1F23]">*</span>
+              </label>
               <input
                 type="text"
-                placeholder="Contoh: 08123456789 atau 628123456789"
+                required
+                autoFocus
+                placeholder="Contoh: 081234567890"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                required
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#128C7E] focus:border-transparent transition"
+                className="w-full h-9 px-3 border border-[#B0C4CF] rounded-md text-[13px] font-mono focus:outline-none focus:border-[#00688E] focus:ring-2 focus:ring-[#00688E]/10"
+              />
+              {previewFormatted && (
+                <p className="text-[11px] text-[#5C7685] mt-1 font-mono tabular-nums">
+                  Format: {previewFormatted}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-xs font-semibold text-[#0F232E] mb-1">Nama Pemilik</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Rizky"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-9 px-3 border border-[#B0C4CF] rounded-md text-[13px] focus:outline-none focus:border-[#00688E]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#0F232E] mb-1">Nama Toko</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Kopi Senja"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                  className="w-full h-9 px-3 border border-[#B0C4CF] rounded-md text-[13px] focus:outline-none focus:border-[#00688E]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#0F232E] mb-1">Label / Tags (opsional)</label>
+              <input
+                type="text"
+                placeholder="VIP, Follow Up"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                className="w-full h-9 px-3 border border-[#B0C4CF] rounded-md text-[13px] focus:outline-none focus:border-[#00688E]"
               />
             </div>
-            {previewFormatted && (
-              <p className="text-[11px] text-gray-500 mt-1">
-                Format standar: <span className="font-semibold text-gray-700">{previewFormatted}</span>
-              </p>
+
+            {done && (
+              <div className="p-2.5 bg-[#E7F8F1] border border-[#A7E7CB] text-[#0D6945] text-xs rounded-md flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Kontak tersimpan! Membuka obrolan...</span>
+              </div>
             )}
           </div>
 
-          {/* Nama Kontak */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Nama Kontak (Opsional)
-            </label>
-            <input
-              type="text"
-              placeholder="Contoh: Budi Santoso"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#128C7E] focus:border-transparent transition"
-            />
-          </div>
-
-          {/* Kategori / Tag */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-              <Tag className="w-3.5 h-3.5 text-gray-400" />
-              Tag / Label (Pisahkan dengan koma)
-            </label>
-            <input
-              type="text"
-              placeholder="Contoh: Customer, VIP, Promo-Nov"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#128C7E] focus:border-transparent transition"
-            />
-          </div>
-
-          {/* Catatan Tambahan */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-              <FileText className="w-3.5 h-3.5 text-gray-400" />
-              Catatan Kontak
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Catatan mengenai pelanggan/klien..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#128C7E] focus:border-transparent transition resize-none"
-            />
-          </div>
-
-          {/* Live Check Result */}
-          {checkResult && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-              <span>Kontak tersimpan! Membuka obrolan...</span>
-            </div>
-          )}
-
-          {/* Footer Submit */}
-          <div className="pt-2 flex items-center justify-end gap-2">
+          <div className="px-4 py-3 border-t border-[#D1DEE5] bg-[#F4F8FA] flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+              className="h-8 px-3 border border-[#B0C4CF] bg-white hover:bg-[#F4F8FA] text-xs font-semibold rounded-md cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={loading || !cleanNumber}
-              className="px-5 py-2 bg-[#128C7E] hover:bg-[#075E54] disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition"
+              className="h-8 px-3.5 bg-[#00688E] hover:bg-[#005575] disabled:opacity-50 text-white text-xs font-semibold rounded-md flex items-center gap-1.5 cursor-pointer"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Memeriksa & Menyimpan...</span>
-                </>
-              ) : (
-                <span>Buka Chat</span>
-              )}
+              {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{loading ? 'Memeriksa...' : 'Mulai Chat'}</span>
             </button>
           </div>
         </form>

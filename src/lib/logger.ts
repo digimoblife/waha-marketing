@@ -6,6 +6,7 @@ export type LogType =
   | 'MEDIA_UPLOAD'
   | 'SESSION_CHANGE'
   | 'AUTH'
+  | 'BROADCAST'
   | 'ERROR'
   | 'CHAT_CLEARED';
 

@@ -16,6 +16,8 @@ import {
   isMessageProcessed,
 } from '../src/lib/msg-cache.ts';
 import { detectMediaType, isWahaInternalMediaUrl } from '../src/lib/waha-media.ts';
+import { interpolateTemplate } from '../src/lib/template-utils.ts';
+import { isOutsideWorkingHours } from '../src/lib/settings.ts';
 
 test('phone.ts: sanitizePhone normalizes Indonesian numbers', () => {
   assert.equal(sanitizePhone('0812-3456-7890'), '6281234567890');
@@ -90,4 +92,30 @@ test('waha-media.ts: detectMediaType and isWahaInternalMediaUrl', () => {
     true
   );
   assert.equal(isWahaInternalMediaUrl('/uploads/waha_AC8E294.jpeg'), false);
+});
+
+test('template-utils.ts: interpolateTemplate fills placeholders with sensible fallbacks', () => {
+  const result = interpolateTemplate('Halo Kak {nama} dari {nama_toko} ({kategori})!', {
+    name: 'Rizky Pratama',
+    storeName: 'Kopi Senja',
+    category: 'Kuliner',
+  });
+  assert.equal(result, 'Halo Kak Rizky dari Kopi Senja (Kuliner)!');
+
+  const fallback = interpolateTemplate('Halo {nama} - {nama_toko} - {kategori}', {});
+  assert.equal(fallback, 'Halo Kak - Toko Anda - Merchant');
+});
+
+test('settings.ts: isOutsideWorkingHours checks WIB (UTC+7) window accurately', () => {
+  // 10:00 WIB = 03:00 UTC -> inside 08:00-17:00
+  const inside = new Date('2026-11-26T03:00:00Z');
+  assert.equal(isOutsideWorkingHours(inside, '08:00', '17:00'), false);
+
+  // 19:30 WIB = 12:30 UTC -> outside 08:00-17:00
+  const outsideEvening = new Date('2026-11-26T12:30:00Z');
+  assert.equal(isOutsideWorkingHours(outsideEvening, '08:00', '17:00'), true);
+
+  // 06:15 WIB = 23:15 UTC prev day -> outside 08:00-17:00
+  const outsideMorning = new Date('2026-11-25T23:15:00Z');
+  assert.equal(isOutsideWorkingHours(outsideMorning, '08:00', '17:00'), true);
 });

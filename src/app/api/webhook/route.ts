@@ -5,6 +5,8 @@ import { resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
 import { isMessageProcessed, markMessageProcessed, extractStanzaId } from '@/lib/msg-cache';
 import { detectMediaType, downloadWahaMedia, isWahaInternalMediaUrl } from '@/lib/waha-media';
+import { getWorkspaceSettings, isOutsideWorkingHours } from '@/lib/settings';
+import { waha } from '@/lib/waha';
 
 /**
  * WAHA Webhook Handler
@@ -357,12 +359,13 @@ export async function POST(req: NextRequest) {
         throw err;
       }
 
-      // Step 3: Now update Chat lastMessage, lastMessageAt, and increment unreadCount exactly +1 for incoming
-      await prisma.chat.update({
+      // Step 3: Now update Chat lastMessage, lastMessageAt, lastInboundAt, and increment unreadCount exactly +1 for incoming
+      const updatedChat = await prisma.chat.update({
         where: { id: chatId },
         data: {
           lastMessage: lastMsgSnippet,
           lastMessageAt: timestamp,
+          ...(fromMe ? {} : { lastInboundAt: timestamp }),
           unreadCount: fromMe ? 0 : { increment: 1 },
         },
       });
@@ -374,6 +377,60 @@ export async function POST(req: NextRequest) {
           `Pesan baru dari ${mappedContact?.name || pushName || chatId}: ${lastMsgSnippet}`,
           { chatId, msgId, mediaType }
         );
+
+        // Optional automation from Admin Settings (Auto-Assign Round-Robin + Away Message)
+        try {
+          const settings = await getWorkspaceSettings();
+
+          // 3a. Round-Robin Auto-Assign for unassigned private chats
+          if (
+            !updatedChat.assigneeId &&
+            !updatedChat.isGroup &&
+            settings.slaHours.assignMode === 'ROUND_ROBIN'
+          ) {
+            const activeOps = await prisma.user.findMany({
+              where: { isActive: true },
+              select: { id: true },
+              orderBy: { createdAt: 'asc' },
+            });
+            if (activeOps.length > 0) {
+              // Pick operator with fewest open/follow-up chats
+              const counts = await Promise.all(
+                activeOps.map(async (op) => ({
+                  id: op.id,
+                  count: await prisma.chat.count({
+                    where: { assigneeId: op.id, status: { not: 'RESOLVED' } },
+                  }),
+                }))
+              );
+              counts.sort((a, b) => a.count - b.count);
+              await prisma.chat.update({
+                where: { id: chatId },
+                data: { assigneeId: counts[0].id },
+              });
+            }
+          }
+
+          // 3b. Away Message outside working hours (max 1x per 24h per chat, non-group only)
+          if (
+            settings.slaHours.awayEnabled &&
+            !updatedChat.isGroup &&
+            settings.slaHours.awayMessage &&
+            isOutsideWorkingHours(new Date(), settings.slaHours.workStart, settings.slaHours.workEnd)
+          ) {
+            const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+            const lastSent = updatedChat.lastAwaySentAt ? updatedChat.lastAwaySentAt.getTime() : 0;
+            if (lastSent < twentyFourHoursAgo) {
+              await waha.sendText(chatId, settings.slaHours.awayMessage);
+              await prisma.chat.update({
+                where: { id: chatId },
+                data: { lastAwaySentAt: new Date() },
+              });
+            }
+          }
+        } catch (autoErr) {
+          console.warn('[Webhook] Automation hook skipped:', autoErr);
+        }
       }
 
       return NextResponse.json({ ok: true, processed: 'message', routedTo: chatId, isNewIncoming: !fromMe });

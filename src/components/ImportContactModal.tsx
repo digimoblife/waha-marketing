@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { X, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Download } from 'lucide-react';
+import { X, Upload, CheckCircle2, AlertCircle, Loader2, Download } from 'lucide-react';
 
 interface ImportContactModalProps {
   isOpen: boolean;
@@ -53,14 +53,12 @@ export default function ImportContactModal({
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal memproses file import');
-      }
+      if (!res.ok) throw new Error(data.error || 'Gagal memproses file import');
 
       setResult(data.summary);
       onImportSuccess();
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat mengunggah file');
+      setError(err.message || 'Terjadi kesalahan saat mengunggah');
     } finally {
       setLoading(false);
     }
@@ -75,174 +73,136 @@ export default function ImportContactModal({
     document.body.removeChild(link);
   };
 
-  const downloadSampleCSV = () => {
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      'Nama,Nomor HP,Kategori,Catatan\n' +
-      'Ahmad Syarif,081234567890,Customer Baru,Minat produk X\n' +
-      'Dewi Lestari,6285712345678,Prospek,Follow up promo akhir tahun\n' +
-      'Budi Hartono,087812345678,VIP,Order rutin bulanan\n';
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'template_kontak_whatsapp.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100">
-        {/* Header */}
-        <div className="bg-[#075E54] text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-wa-green" />
-            <h3 className="font-semibold text-lg">Import Kontak (Excel / CSV)</h3>
-          </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-[10px] shadow-2xl max-w-[480px] w-full overflow-hidden border border-[#B0C4CF]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3.5 border-b border-[#D1DEE5] flex items-center justify-between">
+          <h3 className="font-bold text-[14.5px] text-[#0F232E]">Import Database Merchant (CSV / Excel)</h3>
           <button
+            type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition"
+            className="text-[#5C7685] hover:text-[#0F232E] p-1 rounded-md hover:bg-[#ECF6FA] cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Body */}
-        <form onSubmit={handleUpload} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 text-red-700 text-xs rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+        <form onSubmit={handleUpload}>
+          <div className="p-4 space-y-3.5">
+            {error && (
+              <div className="p-2.5 bg-[#FDECEC] border border-[#F7B4B6] text-[#9E1F23] text-xs rounded-md flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          {/* Download template hints for Merchant Lapaq & Standard */}
-          <div className="bg-gradient-to-r from-amber-50/90 to-blue-50/90 p-3.5 rounded-xl border border-amber-200/80 space-y-2.5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="p-3 bg-[#F4F8FA] border border-[#D1DEE5] rounded-md flex items-center justify-between gap-3">
               <div className="text-xs">
-                <span className="font-bold text-amber-950 block">
-                  Format Kolom Data Merchant Lapaq:
-                </span>
-                <p className="text-amber-900/80 mt-0.5 leading-relaxed text-[11px]">
-                  1. Nama Pemilik • 2. Nama Toko • 3. Kategori Bisnis • 4. Nomor Telepon/HP • 5. Email • 6. Tanggal pembuatan akun • 7. Alamat
+                <div className="font-semibold text-[#0F232E]">Format Kolom Merchant Lapaq</div>
+                <p className="text-[11px] text-[#5C7685] mt-0.5">
+                  Nama Pemilik, Nama Toko, Kategori Bisnis, Nomor HP, Email, Tanggal Akun, Alamat
                 </p>
               </div>
               <button
                 type="button"
                 onClick={downloadMerchantCSV}
-                className="shrink-0 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-                title="Unduh Template CSV Merchant Lapaq"
+                className="h-7 px-2.5 shrink-0 border border-[#B0C4CF] bg-white hover:bg-[#ECF6FA] text-xs font-semibold rounded-md flex items-center gap-1.5 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                Template Merchant (.csv)
+                <span>Contoh CSV</span>
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-amber-200/60 text-[11px] text-slate-500">
-              <span>Mendukung juga format standar: Nama, Nomor HP, Kategori, Catatan</span>
-              <button
-                type="button"
-                onClick={downloadSampleCSV}
-                className="text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer"
-              >
-                Format Biasa
-              </button>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border border-dashed border-[#B0C4CF] hover:border-[#00688E] rounded-lg p-6 text-center cursor-pointer bg-[#F4F8FA] hover:bg-[#ECF6FA]/40 transition"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <Upload className="w-7 h-7 text-[#809AA8] mx-auto mb-2" />
+              {file ? (
+                <div>
+                  <p className="text-[13px] font-semibold text-[#0F232E]">{file.name}</p>
+                  <p className="text-[11.5px] text-[#5C7685] tabular-nums">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[13px] font-semibold text-[#0F232E]">
+                    Klik untuk pilih file .csv atau .xlsx
+                  </p>
+                  <p className="text-[11.5px] text-[#5C7685] mt-0.5">
+                    Nomor HP otomatis dinormalisasi (08xx → 628xx)
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* File Picker / Drag area */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-gray-300 hover:border-[#128C7E] rounded-xl p-6 text-center cursor-pointer bg-gray-50/50 hover:bg-gray-50 transition"
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-            {file ? (
-              <div>
-                <p className="text-sm font-semibold text-gray-800">{file.name}</p>
-                <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm font-medium text-gray-700">
-                  Klik untuk pilih file Excel (.xlsx) atau CSV
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Otomatis menormalisasi nomor HP (08xx $\rightarrow$ 628xx)
-                </p>
+            <div>
+              <label className="block text-xs font-semibold text-[#0F232E] mb-1">
+                Tag Bawaan (opsional)
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: Onboarding, Batch-Nov"
+                value={defaultTag}
+                onChange={(e) => setDefaultTag(e.target.value)}
+                className="w-full h-9 px-3 border border-[#B0C4CF] rounded-md text-[13px] focus:outline-none focus:border-[#00688E]"
+              />
+            </div>
+
+            {result && (
+              <div className="p-3 bg-[#E7F8F1] border border-[#A7E7CB] rounded-md space-y-2">
+                <div className="flex items-center gap-1.5 text-[#0D6945] font-semibold text-xs">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Import Selesai</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs tabular-nums">
+                  <div className="bg-white p-2 rounded border border-[#D1DEE5]">
+                    <span className="text-[#5C7685] block text-[11px]">Total</span>
+                    <span className="font-bold text-[#0F232E]">{result.total}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-[#D1DEE5]">
+                    <span className="text-[#0D6945] block text-[11px]">Berhasil</span>
+                    <span className="font-bold text-[#0D6945]">{result.success}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded border border-[#D1DEE5]">
+                    <span className="text-[#00688E] block text-[11px]">Aktif WA</span>
+                    <span className="font-bold text-[#00688E]">{result.activeWA}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Default Tag input */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-              Tag / Kategori Bawaan (Opsional)
-            </label>
-            <input
-              type="text"
-              placeholder="Contoh: Database-Marketing-Nov"
-              value={defaultTag}
-              onChange={(e) => setDefaultTag(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#128C7E] focus:border-transparent transition"
-            />
-          </div>
-
-          {/* Summary Result */}
-          {result && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Import Selesai!</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-white p-2 rounded-lg border border-emerald-100">
-                  <span className="text-gray-500 block">Total</span>
-                  <span className="font-bold text-gray-800 text-sm">{result.total}</span>
-                </div>
-                <div className="bg-white p-2 rounded-lg border border-emerald-100">
-                  <span className="text-emerald-600 block">Berhasil</span>
-                  <span className="font-bold text-emerald-700 text-sm">{result.success}</span>
-                </div>
-                <div className="bg-white p-2 rounded-lg border border-emerald-100">
-                  <span className="text-wa-teal-dark block">Aktif WA</span>
-                  <span className="font-bold text-wa-teal text-sm">{result.activeWA}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Footer Submit */}
-          <div className="pt-2 flex items-center justify-end gap-2">
+          <div className="px-4 py-3 border-t border-[#D1DEE5] bg-[#F4F8FA] flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+              className="h-8 px-3 border border-[#B0C4CF] bg-white hover:bg-[#F4F8FA] text-xs font-semibold rounded-md cursor-pointer"
             >
               Tutup
             </button>
             <button
               type="submit"
               disabled={loading || !file}
-              className="px-5 py-2 bg-[#128C7E] hover:bg-[#075E54] disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition"
+              className="h-8 px-3.5 bg-[#00688E] hover:bg-[#005575] disabled:opacity-50 text-white text-xs font-semibold rounded-md flex items-center gap-1.5 cursor-pointer"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Mengimpor & Memvalidasi...</span>
-                </>
-              ) : (
-                <span>Mulai Import</span>
-              )}
+              {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{loading ? 'Mengimpor...' : 'Mulai Import'}</span>
             </button>
           </div>
         </form>

@@ -7,21 +7,26 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-sans)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
       colors: {
-        wa: {
-          green: '#25D366',
-          teal: '#128C7E',
-          'teal-dark': '#075E54',
-          light: '#25d366',
-          blue: '#34B7F1',
-          bg: '#EFEAE2',
-          'chat-in': '#FFFFFF',
-          'chat-out': '#D9FDD3',
-          gray: '#F0F2F5',
-          'gray-dark': '#54656F',
+        brand: {
+          DEFAULT: '#00688E',
+          hover: '#005575',
+          dark: '#00435C',
+          soft: '#ECF6FA',
+          border: '#A7D6E7',
+        },
+        surface: {
+          app: '#F4F8FA',
+          card: '#FFFFFF',
+          subtle: '#E8EFF3',
+          active: '#D3EBF3',
         },
       },
     },
   },
   plugins: [],
-}
+};

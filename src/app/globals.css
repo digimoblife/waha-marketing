@@ -3,16 +3,32 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 17, 27, 33;
-  --background-start-rgb: 240, 242, 245;
-  --background-end-rgb: 240, 242, 245;
+  --bg-app: #F4F8FA;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #E8EFF3;
+  --bg-hover: #ECF6FA;
+  --bg-active: #D3EBF3;
+  --border: #D1DEE5;
+  --border-strong: #B0C4CF;
+  --border-subtle: #E8EFF3;
+  --text-primary: #0F232E;
+  --text-secondary: #435A68;
+  --text-muted: #5C7685;
+  --accent: #00688E;
+  --accent-hover: #005575;
+  --accent-soft: #ECF6FA;
+  --accent-border: #A7D6E7;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #EFEAE2;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Custom Scrollbar */
@@ -26,17 +42,15 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(11, 20, 26, 0.2);
-  border-radius: 3px;
+  background: rgba(17, 24, 39, 0.14);
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(11, 20, 26, 0.35);
+  background: rgba(17, 24, 39, 0.28);
 }
 
-/* WhatsApp background pattern simulation */
+/* Clean Chat Canvas */
 .wa-chat-bg {
-  background-color: #efeae2;
-  background-image: radial-gradient(#d5cdc4 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-color: #F4F8FA;
 }

@@ -8,26 +8,27 @@ generator client {
 }
 
 model Contact {
-  id            String    @id @default(cuid())
-  phone         String    @unique
-  jid           String    @unique
-  lid           String?   @unique
-  name          String?
-  pushName      String?
-  profilePicUrl String?
-  isWAUser      Boolean   @default(true)
-  tags          String?   // comma-separated tags e.g. "Customer,Lead"
-  notes         String?
-  storeName     String?   // Nama Toko
-  businessCategory String? // Kategori Bisnis (e.g. Kuliner, Fashion)
-  email         String?   // Email Merchant
-  accountCreatedAt String? // Tanggal Pembuatan Akun di Lapaq
-  address       String?   // Alamat Toko / Kota
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String        @id @default(cuid())
+  phone            String        @unique
+  jid              String        @unique
+  lid              String?       @unique
+  name             String?
+  pushName         String?
+  profilePicUrl    String?
+  isWAUser         Boolean       @default(true)
+  tags             String?       // comma-separated tags e.g. "Customer,Lead"
+  notes            String?       // legacy single note (migrated/compatible with ContactNote)
+  storeName        String?       // Nama Toko
+  businessCategory String?       // Kategori Bisnis (e.g. Kuliner, Fashion)
+  email            String?       // Email Merchant
+  accountCreatedAt String?       // Tanggal Pembuatan Akun di Lapaq
+  address          String?       // Alamat Toko / Kota
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
-  chats         Chat[]
-  messages      Message[]
+  chats            Chat[]
+  messages         Message[]
+  contactNotes     ContactNote[]
 
   @@index([phone])
   @@index([lid])
@@ -35,22 +36,44 @@ model Contact {
   @@index([businessCategory])
 }
 
-model Chat {
-  id            String    @id // jid e.g. "628123456789@c.us" or "...@lid"
-  name          String?
-  isGroup       Boolean   @default(false)
-  unreadCount   Int       @default(0)
-  lastMessage   String?
-  lastMessageAt DateTime?
-  contactId     String?
-  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+model ContactNote {
+  id         String   @id @default(cuid())
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  authorId   String?
+  authorName String
+  body       String
+  createdAt  DateTime @default(now())
 
-  messages      Message[]
+  @@index([contactId, createdAt])
+}
+
+model Chat {
+  id             String    @id // jid e.g. "628123456789@c.us" or "...@lid"
+  name           String?
+  isGroup        Boolean   @default(false)
+  unreadCount    Int       @default(0)
+  lastMessage    String?
+  lastMessageAt  DateTime?
+  lastInboundAt  DateTime?
+  lastAwaySentAt DateTime?
+  status         String    @default("OPEN") // "OPEN" | "FOLLOW_UP" | "RESOLVED"
+  assigneeId     String?
+  assignee       User?     @relation("AssignedChats", fields: [assigneeId], references: [id], onDelete: SetNull)
+  reminderAt     DateTime?
+  reminderNote   String?
+  contactId      String?
+  contact        Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  messages       Message[]
 
   @@index([lastMessageAt])
   @@index([updatedAt])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([reminderAt])
 }
 
 model Message {
@@ -72,22 +95,85 @@ model Message {
   timestamp    DateTime @default(now())
 
   @@index([chatId, timestamp])
+  @@index([fromMe, timestamp])
 }
 
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  name      String
-  role      String   @default("ADMIN") // "ADMIN" or "OPERATOR"
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  username      String   @unique
+  password      String
+  name          String
+  role          String   @default("ADMIN") // "ADMIN" or "OPERATOR"
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assignedChats Chat[]   @relation("AssignedChats")
+}
+
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  shortcut    String   @unique // e.g. "/salam"
+  title       String
+  category    String   @default("Umum") // "Onboarding" | "Follow Up" | "Promo" | "CS" | "Umum"
+  body        String
+  mediaUrl    String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+model BroadcastCampaign {
+  id            String               @id @default(cuid())
+  name          String
+  templateId    String?
+  messageBody   String
+  mediaUrl      String?
+  delayMinSec   Int                  @default(10)
+  delayMaxSec   Int                  @default(20)
+  status        String               @default("DRAFT") // "DRAFT" | "RUNNING" | "PAUSED" | "COMPLETED" | "CANCELLED"
+  totalCount    Int                  @default(0)
+  sentCount     Int                  @default(0)
+  failedCount   Int                  @default(0)
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime             @default(now())
+  completedAt   DateTime?
+
+  recipients    BroadcastRecipient[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model BroadcastRecipient {
+  id               String            @id @default(cuid())
+  campaignId       String
+  campaign         BroadcastCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  phone            String
+  jid              String
+  contactId        String?
+  storeName        String?
+  contactName      String?
+  businessCategory String?
+  status           String            @default("QUEUED") // "QUEUED" | "SENT" | "FAILED"
+  error            String?
+  sentAt           DateTime?
+
+  @@index([campaignId, status])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String   // JSON serialized payload
   updatedAt DateTime @updatedAt
 }
 
 model Log {
   id        String   @id @default(cuid())
-  type      String   // "MESSAGE_SENT" | "MESSAGE_RECEIVED" | "MEDIA_UPLOAD" | "SESSION_CHANGE" | "AUTH" | "ERROR"
+  type      String   // "MESSAGE_SENT" | "MESSAGE_RECEIVED" | "MEDIA_UPLOAD" | "SESSION_CHANGE" | "AUTH" | "BROADCAST" | "ERROR"
   status    String   // "SUCCESS" | "ERROR" | "WARNING"
   message   String
   details   String?

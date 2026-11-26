@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
-  QrCode,
   RefreshCw,
   CheckCircle2,
   AlertCircle,
@@ -38,7 +37,6 @@ export default function QRModal({
   const [resetDbOnLogout, setResetDbOnLogout] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Auto-refresh QR code image every 5 seconds when in SCAN_QR_CODE
   useEffect(() => {
     if (!isOpen || status !== 'SCAN_QR_CODE') return;
     const timer = setInterval(() => {
@@ -57,7 +55,7 @@ export default function QRModal({
     try {
       await onRefresh();
     } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
+      setTimeout(() => setIsRefreshing(false), 450);
     }
   };
 
@@ -70,12 +68,11 @@ export default function QRModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'restart' }),
       });
-      // Wait for engine to start fresh
       setTimeout(() => {
         setQrTimestamp(Date.now());
         onRefresh();
         setIsRestarting(false);
-      }, 1500);
+      }, 1400);
     } catch {
       setIsRestarting(false);
     }
@@ -91,86 +88,77 @@ export default function QRModal({
         setQrTimestamp(Date.now());
         onRefresh();
         setIsLoggingOut(false);
-      }, 1500);
+      }, 1200);
     } catch {
       setIsLoggingOut(false);
     }
   };
 
-  const isFailed = status === 'FAILED';
+  const isFailed = status === 'FAILED' || status === 'OFFLINE' || status === 'STOPPED';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100 flex flex-col">
-        {/* Modal Header */}
-        <div className="bg-[#075E54] text-white px-6 py-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-wa-green" />
-            <h3 className="font-semibold text-lg">Koneksi & Sesi WhatsApp</h3>
-          </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-[2px] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-[10px] shadow-2xl max-w-[440px] w-full overflow-hidden border border-[#B0C4CF] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3.5 border-b border-[#D1DEE5] flex items-center justify-between">
+          <h3 className="font-bold text-[14.5px] text-[#0F232E]">Koneksi WAHA Engine</h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-white/80 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition cursor-pointer"
+            className="text-[#5C7685] hover:text-[#0F232E] p-1 rounded-md hover:bg-[#ECF6FA] transition cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 text-center space-y-4">
-          {/* Status Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100">
-            <span>Status Engine:</span>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-md bg-[#F4F8FA] border border-[#D1DEE5]">
+            <div className="text-xs text-[#5C7685]">
+              Status Sesi (<code className="font-mono text-[#0F232E]">default</code>)
+            </div>
             <span
-              className={`px-2 py-0.5 rounded-full ${
+              className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${
                 status === 'WORKING'
-                  ? 'bg-emerald-100 text-emerald-800'
+                  ? 'bg-[#E7F8F1] text-[#0D6945] border-[#A7E7CB]'
                   : status === 'SCAN_QR_CODE'
-                  ? 'bg-amber-100 text-amber-800 animate-pulse'
-                  : 'bg-red-100 text-red-700'
+                  ? 'bg-[#FEF5E4] text-[#8F5A05] border-[#F7D488]'
+                  : 'bg-[#FDECEC] text-[#9E1F23] border-[#F7B4B6]'
               }`}
             >
-              {status === 'WORKING'
-                ? 'Terhubung (Online)'
-                : status === 'SCAN_QR_CODE'
-                ? 'Siap Scan QR Code'
-                : status === 'FAILED'
-                ? 'Sesi Gagal (FAILED)'
-                : status}
+              {status}
             </span>
           </div>
 
           {status === 'WORKING' ? (
             confirmLogout ? (
-              /* Confirmation Logout Screen */
-              <div className="py-4 space-y-4 text-left bg-red-50/70 p-4 rounded-xl border border-red-200">
-                <div className="flex items-center gap-2 text-red-700 font-semibold text-sm">
-                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-                  <span>Konfirmasi Logout Nomor WhatsApp</span>
+              <div className="space-y-3 bg-[#FDECEC] p-4 rounded-md border border-[#F7B4B6]">
+                <div className="flex items-center gap-2 text-[#9E1F23] font-semibold text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Konfirmasi Putus Sesi WhatsApp</span>
                 </div>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  Sesi WhatsApp yang aktif akan diputus dari engine WAHA. Anda dapat memindai nomor baru setelah logout.
+                <p className="text-xs text-[#435A68] leading-relaxed">
+                  Sesi WhatsApp aktif akan diputus dari WAHA. Anda bisa memindai nomor baru setelah logout.
                 </p>
-
-                <label className="flex items-start gap-2 text-xs text-gray-700 pt-1 cursor-pointer select-none">
+                <label className="flex items-start gap-2 text-xs text-[#0F232E] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={resetDbOnLogout}
                     onChange={(e) => setResetDbOnLogout(e.target.checked)}
-                    className="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    className="mt-0.5 accent-[#9E1F23]"
                   />
-                  <span>
-                    <strong>Bersihkan database chat lama</strong> (Mulai lembaran baru untuk nomor berikutnya)
-                  </span>
+                  <span>Bersihkan database chat lama (mulai baru untuk nomor berikutnya)</span>
                 </label>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex items-center justify-end gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setConfirmLogout(false)}
                     disabled={isLoggingOut}
-                    className="px-3 py-1.5 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs rounded-lg font-medium transition cursor-pointer"
+                    className="h-8 px-3 border border-[#B0C4CF] bg-white hover:bg-[#F4F8FA] text-xs font-semibold rounded-md cursor-pointer"
                   >
                     Batal
                   </button>
@@ -178,35 +166,27 @@ export default function QRModal({
                     type="button"
                     onClick={executeLogout}
                     disabled={isLoggingOut}
-                    className="px-4 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs rounded-lg font-semibold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                    className="h-8 px-3 bg-[#9E1F23] hover:bg-[#991B1B] text-white text-xs font-semibold rounded-md flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                   >
                     {isLoggingOut ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
-                    <span>{isLoggingOut ? 'Memutuskan Sesi...' : 'Ya, Logout Sekarang'}</span>
+                    <span>Ya, Putus Sesi</span>
                   </button>
                 </div>
               </div>
             ) : (
-              /* Connected Screen */
-              <div className="py-6 space-y-3">
-                <CheckCircle2 className="w-16 h-16 text-wa-green mx-auto" />
-                <h4 className="text-xl font-bold text-gray-800">WhatsApp Sudah Terhubung!</h4>
-                <p className="text-sm text-gray-500 max-w-xs mx-auto">
-                  Akun WhatsApp Anda aktif dan siap digunakan untuk mengirim dan menerima pesan.
-                </p>
-
-                <div className="pt-4 flex flex-col gap-2 max-w-xs mx-auto">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="w-full py-2 bg-[#128C7E] hover:bg-[#075E54] text-white text-xs font-semibold rounded-lg cursor-pointer transition shadow"
-                  >
-                    Lanjut Menggunakan Web WhatsApp
-                  </button>
-
+              <div className="py-3 text-center space-y-3">
+                <CheckCircle2 className="w-11 h-11 text-[#0D6945] mx-auto" />
+                <div>
+                  <h4 className="text-sm font-bold text-[#0F232E]">WhatsApp Terhubung</h4>
+                  <p className="text-xs text-[#5C7685] mt-1">
+                    Engine aktif menerima webhook dan siap mengirim pesan maupun broadcast.
+                  </p>
+                </div>
+                <div className="pt-2 flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={() => setConfirmLogout(true)}
-                    className="w-full py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    className="w-full h-8 bg-white hover:bg-[#FDECEC] text-[#9E1F23] border border-[#F7B4B6] text-xs font-semibold rounded-md flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Ganti / Logout Nomor WhatsApp</span>
@@ -215,99 +195,96 @@ export default function QRModal({
               </div>
             )
           ) : isFailed ? (
-            /* Explicit FAILED Screen with Restart Button */
-            <div className="py-8 space-y-4 bg-red-50/50 p-6 rounded-2xl border border-red-100">
-              <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
-                <AlertCircle className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-bold text-gray-900 text-base">Sesi WhatsApp Terputus (FAILED)</h4>
-                <p className="text-xs text-gray-600 max-w-xs mx-auto leading-relaxed">
-                  Sesi WhatsApp sebelumnya gagal atau telah terputus dari perangkat Anda. Klik tombol di bawah untuk membuat QR Code baru.
+            <div className="py-5 px-4 text-center space-y-3 bg-[#FDECEC] rounded-md border border-[#F7B4B6]">
+              <AlertCircle className="w-8 h-8 text-[#9E1F23] mx-auto" />
+              <div>
+                <h4 className="text-sm font-bold text-[#0F232E]">Sesi Tidak Aktif ({status})</h4>
+                <p className="text-xs text-[#435A68] mt-1">
+                  Mulai ulang sesi WAHA untuk membuat kode QR baru.
                 </p>
               </div>
-
-              <button
-                type="button"
-                onClick={handleRestartSession}
-                disabled={isRestarting}
-                className="w-full py-2.5 bg-[#128C7E] hover:bg-[#075E54] disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
-              >
-                {isRestarting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Mempersiapkan QR Code Baru...</span>
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Buat QR Code Baru Sekarang</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={onStartSession}
+                  className="h-8 px-3 bg-white border border-[#B0C4CF] text-xs font-semibold rounded-md hover:bg-[#F4F8FA] cursor-pointer"
+                >
+                  Start Session
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRestartSession}
+                  disabled={isRestarting}
+                  className="h-8 px-3 bg-[#00688E] hover:bg-[#005575] text-white text-xs font-semibold rounded-md flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {isRestarting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  <span>Restart & Buat QR</span>
+                </button>
+              </div>
             </div>
           ) : (
-            /* QR Scan Screen (SCAN_QR_CODE or STARTING) */
-            <div className="space-y-4">
-              <div className="p-2.5 bg-white border-2 border-dashed border-[#128C7E]/40 rounded-xl inline-block shadow-inner relative min-w-[240px] min-h-[240px] flex items-center justify-center">
+            <div className="space-y-3 text-center">
+              <div className="p-2.5 bg-white border border-[#D1DEE5] rounded-lg inline-flex items-center justify-center relative min-w-[220px] min-h-[220px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   key={qrTimestamp}
                   src={`/api/session/qr?t=${qrTimestamp}`}
                   alt="WhatsApp QR Code"
-                  className="w-56 h-56 mx-auto rounded-lg object-contain bg-white block"
+                  className="w-52 h-52 object-contain bg-white"
                   onLoad={() => setImageError(false)}
                   onError={() => setImageError(true)}
                 />
-
                 {imageError && (
-                  <div className="absolute inset-0 bg-white/95 rounded-xl flex flex-col items-center justify-center p-4 text-center space-y-2">
-                    <AlertCircle className="w-10 h-10 text-amber-500" />
-                    <p className="text-xs font-semibold text-gray-700">Kode QR sedang disiapkan...</p>
+                  <div className="absolute inset-0 bg-white/95 rounded-lg flex flex-col items-center justify-center p-4 space-y-2">
+                    <AlertCircle className="w-7 h-7 text-[#8F5A05]" />
+                    <p className="text-xs font-semibold text-[#0F232E]">Kode QR sedang disiapkan...</p>
                     <button
                       type="button"
                       onClick={handleRestartSession}
                       disabled={isRestarting}
-                      className="px-3 py-1.5 bg-[#128C7E] hover:bg-[#075E54] text-white text-xs rounded-lg cursor-pointer flex items-center gap-1.5 transition"
+                      className="h-7 px-3 bg-[#00688E] text-white text-xs font-semibold rounded-md cursor-pointer"
                     >
-                      {isRestarting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                      <span>Mulai Sesi Ulang</span>
+                      Mulai Sesi Ulang
                     </button>
                   </div>
                 )}
               </div>
-
-              <div className="text-xs text-gray-600 space-y-1 text-left bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-                <p className="font-semibold text-gray-800 text-[13px] mb-1">Cara scan dengan nomor baru:</p>
-                <p>1. Buka <strong>WhatsApp</strong> di HP Anda</p>
-                <p>2. Buka menu <strong>Perangkat Tertaut</strong> (titik tiga di Android atau Pengaturan di iPhone)</p>
-                <p>3. Ketuk <strong>Tautkan Perangkat</strong> lalu arahkan kamera ke kode QR di atas</p>
-              </div>
+              <p className="text-xs text-[#5C7685]">
+                Buka <strong>WhatsApp → Perangkat Tertaut → Tautkan Perangkat</strong> lalu scan QR di atas.
+              </p>
             </div>
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500 shrink-0">
+        <div className="px-4 py-3 border-t border-[#D1DEE5] bg-[#F4F8FA] flex items-center justify-between text-xs">
           <a
             href="/api/session/qr"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 text-gray-500 hover:text-[#075E54] hover:underline"
+            className="flex items-center gap-1 text-[#5C7685] hover:text-[#0F232E] hover:underline"
           >
             <span>Buka QR Tab Baru</span>
             <ExternalLink className="w-3 h-3" />
           </a>
 
-          <button
-            type="button"
-            onClick={isFailed ? handleRestartSession : handleManualRefresh}
-            disabled={isRefreshing || isRestarting}
-            className="flex items-center gap-1.5 text-[#128C7E] hover:text-[#075E54] font-semibold cursor-pointer px-2.5 py-1 rounded-md hover:bg-gray-200/60 transition"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || isRestarting ? 'animate-spin' : ''}`} />
-            <span>{isFailed ? 'Restart Sesi' : isRefreshing ? 'Memperbarui...' : 'Refresh QR'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={isFailed ? handleRestartSession : handleManualRefresh}
+              disabled={isRefreshing || isRestarting}
+              className="h-8 px-3 border border-[#B0C4CF] bg-white hover:bg-[#F4F8FA] text-[#0F232E] font-semibold rounded-md flex items-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || isRestarting ? 'animate-spin' : ''}`} />
+              <span>{isFailed ? 'Restart' : 'Refresh'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-8 px-3 bg-[#00688E] hover:bg-[#005575] text-white font-semibold rounded-md cursor-pointer"
+            >
+              Selesai
+            </button>
+          </div>
         </div>
       </div>
     </div>

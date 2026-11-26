@@ -35,6 +35,14 @@ export async function GET() {
     const chats = await prisma.chat.findMany({
       include: {
         contact: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            role: true,
+          },
+        },
       },
       orderBy: {
         updatedAt: 'desc',
@@ -88,12 +96,79 @@ export async function POST(req: NextRequest) {
       },
       include: {
         contact: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            role: true,
+          },
+        },
       },
     });
 
     return NextResponse.json({ ok: true, chat });
   } catch (err: any) {
     console.error('Error in POST /api/chats:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// PATCH: Update chat status, assigneeId, or follow-up reminder
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { chatId: rawChatId, status, assigneeId, reminderAt, reminderNote, clearReminder } = body;
+
+    if (!rawChatId) {
+      return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
+    }
+
+    const chatId = normalizeJid(rawChatId);
+    const data: any = {};
+
+    if (status !== undefined) {
+      if (!['OPEN', 'FOLLOW_UP', 'RESOLVED'].includes(status)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
+      data.status = status;
+    }
+
+    if (assigneeId !== undefined) {
+      data.assigneeId = assigneeId ? String(assigneeId) : null;
+    }
+
+    if (clearReminder) {
+      data.reminderAt = null;
+      data.reminderNote = null;
+    } else {
+      if (reminderAt !== undefined) {
+        data.reminderAt = reminderAt ? new Date(reminderAt) : null;
+      }
+      if (reminderNote !== undefined) {
+        data.reminderNote = reminderNote ? String(reminderNote).trim() : null;
+      }
+    }
+
+    const updated = await prisma.chat.update({
+      where: { id: chatId },
+      data,
+      include: {
+        contact: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ ok: true, chat: updated });
+  } catch (err: any) {
+    console.error('Error in PATCH /api/chats:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
