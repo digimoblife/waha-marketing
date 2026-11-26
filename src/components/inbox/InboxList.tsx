@@ -3,6 +3,7 @@
 import React from 'react';
 import { Search, Plus, Clock, MessageSquare } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
+import Select from '@/components/ui/Select';
 
 export type QuickFilter = 'all' | 'unread' | 'mine' | 'reminder';
 
@@ -113,9 +114,9 @@ export default function InboxList({
             />
           </div>
 
-          <select
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(v) => setStatusFilter(v)}
             title="Filter Status"
             className="h-8 w-[104px] px-2 border border-[#D1DEE5] rounded-md text-[11.5px] font-medium bg-white text-[#0F232E] focus:outline-none focus:border-[#00688E] shrink-0"
           >
@@ -123,7 +124,7 @@ export default function InboxList({
             <option value="OPEN">Open</option>
             <option value="FOLLOW_UP">Follow Up</option>
             <option value="RESOLVED">Selesai</option>
-          </select>
+          </Select>
         </div>
 
         <div className="flex items-center gap-1 flex-wrap">

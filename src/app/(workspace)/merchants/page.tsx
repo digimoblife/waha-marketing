@@ -18,6 +18,7 @@ import ImportContactModal from '@/components/ImportContactModal';
 import NewChatModal from '@/components/NewChatModal';
 import { useWorkspace } from '@/components/WorkspaceContext';
 import { useRouter } from 'next/navigation';
+import Select from '@/components/ui/Select';
 
 export default function MerchantsPage() {
   const router = useRouter();
@@ -182,9 +183,9 @@ export default function MerchantsPage() {
                 />
               </div>
 
-              <select
+              <Select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(v) => setSelectedCategory(v)}
                 className="h-8 px-2.5 border border-[#D1DEE5] rounded-md text-[12.5px] bg-white focus:outline-none focus:border-[#00688E]"
               >
                 <option value="ALL">Semua Kategori</option>
@@ -193,17 +194,17 @@ export default function MerchantsPage() {
                     {cat}
                   </option>
                 ))}
-              </select>
+              </Select>
 
-              <select
+              <Select
                 value={waFilter}
-                onChange={(e) => setWaFilter(e.target.value)}
+                onChange={(v) => setWaFilter(v)}
                 className="h-8 px-2.5 border border-[#D1DEE5] rounded-md text-[12.5px] bg-white focus:outline-none focus:border-[#00688E]"
               >
                 <option value="ALL">Semua Status WA</option>
                 <option value="ACTIVE">Aktif WA</option>
                 <option value="UNVERIFIED">Belum Verifikasi</option>
-              </select>
+              </Select>
             </div>
 
             <span className="text-xs text-[#5C7685] tabular-nums">

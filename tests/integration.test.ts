@@ -275,6 +275,34 @@ test('Integration: chat status, assignee, reminder, and 3-latest internal team n
   assert.equal(allNotes.notes.length, 4);
 });
 
+test('Integration: contact tags add/remove are persisted and linked to chat immediately', async () => {
+  const { PATCH: contactsPATCH } = await import('../src/app/api/contacts/route.ts');
+  const jid = '628777000111@c.us';
+  // Chat exists WITHOUT a contact row (e.g. brand-new inbound number)
+  await prisma.chat.create({ data: { id: jid, name: 'Tanpa Kontak' } });
+
+  const addRes = await contactsPATCH(
+    makeJsonReq('http://localhost/api/contacts', { jid, tags: 'VIP, Follow Up' }, 'PATCH')
+  );
+  assert.equal(addRes.status, 200);
+  const addJson = await addRes.json();
+  assert.equal(addJson.contact.tags, 'VIP, Follow Up');
+
+  // Chat list must now return the contact with tags (no reload needed)
+  let chatsJson = await (await chatsGET()).json();
+  let chat = chatsJson.chats.find((c: any) => c.id === jid);
+  assert.equal(chat.contact?.tags, 'VIP, Follow Up');
+
+  const removeRes = await contactsPATCH(
+    makeJsonReq('http://localhost/api/contacts', { jid, tags: 'VIP' }, 'PATCH')
+  );
+  assert.equal((await removeRes.json()).contact.tags, 'VIP');
+
+  chatsJson = await (await chatsGET()).json();
+  chat = chatsJson.chats.find((c: any) => c.id === jid);
+  assert.equal(chat.contact?.tags, 'VIP');
+});
+
 test('Integration: templates CRUD, settings persistence, broadcast guardrail, and admin overview work', async () => {
   // 1. Templates auto-seed & CRUD
   const seedRes = await templatesGET();

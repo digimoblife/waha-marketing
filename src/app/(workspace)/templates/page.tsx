@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Plus, Loader2, X, Trash2, Pencil, AlertCircle } from 'lucide-react';
 import { useWorkspace } from '@/components/WorkspaceContext';
+import Select from '@/components/ui/Select';
 
 interface TemplateItem {
   id: string;
@@ -257,9 +258,9 @@ export default function TemplatesPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-[#0F232E] mb-1">Kategori</label>
-                    <select
+                    <Select
                       value={category}
-                      onChange={(e) => setCategory(e.target.value)}
+                      onChange={(v) => setCategory(v)}
                       className="w-full h-9 px-2.5 border border-[#B0C4CF] rounded-md text-[13px] bg-white focus:outline-none focus:border-[#00688E]"
                     >
                       <option value="Onboarding">Onboarding</option>
@@ -267,7 +268,7 @@ export default function TemplatesPage() {
                       <option value="Promo">Promo</option>
                       <option value="CS">CS</option>
                       <option value="Umum">Umum</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
 

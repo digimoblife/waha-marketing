@@ -15,6 +15,7 @@ import {
 import { formatDisplayPhone, isLid } from '@/lib/phone';
 import { formatAccountDate } from '@/lib/date';
 import { useWorkspace } from '../WorkspaceContext';
+import Select from '@/components/ui/Select';
 
 interface MerchantInspectorProps {
   chatId: string;
@@ -27,7 +28,7 @@ interface MerchantInspectorProps {
   onCloseDesktop: () => void;
   onOpenReminderModal: () => void;
   onCompleteReminder: () => Promise<void>;
-  onContactUpdated: () => void;
+  onContactUpdated: (updatedContact?: any) => void;
   onMergeSuccess: (targetJid: string) => void;
   onClearChat: (mode: 'clear_messages' | 'delete_chat') => void;
 }
@@ -117,7 +118,7 @@ export default function MerchantInspector({
         });
         const dC = await resC.json();
         targetContactId = dC.contact?.id;
-        onContactUpdated();
+        onContactUpdated(dC.contact);
       }
 
       if (!targetContactId) {
@@ -155,20 +156,28 @@ export default function MerchantInspector({
     .filter(Boolean);
 
   const updateTags = async (nextTags: string[]) => {
+    const tagString = nextTags.join(', ');
+    // Optimistic: reflect the change in the UI immediately
+    if (contact) {
+      onContactUpdated({ ...contact, tags: tagString });
+    }
     try {
       const res = await fetch('/api/contacts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jid: chatId,
-          tags: nextTags.join(', '),
+          tags: tagString,
         }),
       });
-      if (res.ok) {
-        onContactUpdated();
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal memperbarui label');
+      onContactUpdated(data.contact);
+      return true;
     } catch {
       notify('Gagal memperbarui label');
+      onContactUpdated(); // re-sync with server state
+      return false;
     }
   };
 
@@ -176,15 +185,16 @@ export default function MerchantInspector({
     const clean = tagValue.trim();
     if (!clean) return;
     if (!currentTags.includes(clean)) {
-      await updateTags([...currentTags, clean]);
-      notify(`Label "${clean}" ditambahkan`);
+      const ok = await updateTags([...currentTags, clean]);
+      if (ok) notify(`Label "${clean}" ditambahkan`);
     }
     setCustomTag('');
     setAddingTag(false);
   };
 
   const handleRemoveTag = async (tagValue: string) => {
-    await updateTags(currentTags.filter((t) => t !== tagValue));
+    const ok = await updateTags(currentTags.filter((t) => t !== tagValue));
+    if (ok) notify(`Label "${tagValue}" dihapus`);
   };
 
   const handleSaveProfile = async () => {
@@ -200,9 +210,10 @@ export default function MerchantInspector({
           storeName: editStoreName.trim() || undefined,
         }),
       });
+      const data = await res.json();
       if (!res.ok) throw new Error('Gagal memperbarui profil');
       setEditingProfile(false);
-      onContactUpdated();
+      onContactUpdated(data.contact);
       notify('Profil merchant diperbarui');
     } catch (err: any) {
       notify(err.message);
@@ -636,9 +647,9 @@ export default function MerchantInspector({
                 <Link2 className="w-3.5 h-3.5" />
                 <span>Gabungkan LID ke Kontak</span>
               </div>
-              <select
+              <Select
                 value={mergeTargetJid}
-                onChange={(e) => setMergeTargetJid(e.target.value)}
+                onChange={(v) => setMergeTargetJid(v)}
                 className="w-full h-8 px-2 border border-[#B0C4CF] rounded-md text-xs bg-white"
               >
                 <option value="">Pilih kontak tujuan...</option>
@@ -649,7 +660,7 @@ export default function MerchantInspector({
                       {c.storeName || c.name || c.phone} ({c.phone})
                     </option>
                   ))}
-              </select>
+              </Select>
               <button
                 type="button"
                 disabled={!mergeTargetJid || merging}

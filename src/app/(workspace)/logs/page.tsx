@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
+import Select from '@/components/ui/Select';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -73,9 +74,9 @@ export default function LogsPage() {
               ))}
             </div>
 
-            <select
+            <Select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(v) => setTypeFilter(v)}
               className="h-8 px-2.5 border border-[#D1DEE5] rounded-md text-xs bg-white focus:outline-none focus:border-[#00688E]"
             >
               <option value="ALL">Semua Tipe</option>
@@ -86,7 +87,7 @@ export default function LogsPage() {
               <option value="SESSION_CHANGE">SESSION_CHANGE</option>
               <option value="AUTH">AUTH</option>
               <option value="ERROR">ERROR</option>
-            </select>
+            </Select>
           </div>
 
           <div className="overflow-x-auto">

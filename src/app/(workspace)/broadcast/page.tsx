@@ -7,6 +7,7 @@ import { Send, Pause, Play, XCircle, Loader2, Plus, AlertCircle, Download, Searc
 import { sanitizePhone, formatDisplayPhone } from '@/lib/phone';
 import { interpolateTemplate } from '@/lib/template-utils';
 import { useWorkspace } from '@/components/WorkspaceContext';
+import Select from '@/components/ui/Select';
 
 interface ManualRecipient {
   id: string;
@@ -376,9 +377,9 @@ function BroadcastPageInner() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-[#0F232E] mb-1">Filter Kategori</label>
-                <select
+                <Select
                   value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  onChange={(v) => setCategoryFilter(v)}
                   className="w-full h-9 px-2.5 border border-[#B0C4CF] rounded-md text-[12.5px] bg-white"
                 >
                   <option value="ALL">Semua Kategori</option>
@@ -387,18 +388,18 @@ function BroadcastPageInner() {
                       {cat}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#0F232E] mb-1">Filter Status WA</label>
-                <select
+                <Select
                   value={waFilter}
-                  onChange={(e) => setWaFilter(e.target.value)}
+                  onChange={(v) => setWaFilter(v)}
                   className="w-full h-9 px-2.5 border border-[#B0C4CF] rounded-md text-[12.5px] bg-white"
                 >
                   <option value="ACTIVE">Hanya Aktif WA</option>
                   <option value="ALL">Semua Kontak</option>
-                </select>
+                </Select>
               </div>
             </div>
 
@@ -510,9 +511,9 @@ function BroadcastPageInner() {
                 <label className="block text-xs font-semibold text-[#0F232E] mb-1">
                   Gunakan Template
                 </label>
-                <select
+                <Select
                   value={selectedTemplateId}
-                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  onChange={(v) => handleTemplateChange(v)}
                   className="w-full h-9 px-2.5 border border-[#B0C4CF] rounded-md text-[12.5px] bg-white"
                 >
                   <option value="">-- Tulis Manual --</option>
@@ -521,21 +522,21 @@ function BroadcastPageInner() {
                       {t.title} ({t.shortcut})
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#0F232E] mb-1">
                   Jeda Acak Anti-Ban (min {quota.minDelaySec}s)
                 </label>
-                <select
+                <Select
                   value={delayPreset}
-                  onChange={(e) => setDelayPreset(e.target.value as any)}
+                  onChange={(v) => setDelayPreset(v as any)}
                   className="w-full h-9 px-2.5 border border-[#B0C4CF] rounded-md text-[12.5px] bg-white"
                 >
                   <option value="safe">Aman: {Math.max(10, quota.minDelaySec)}–{Math.max(20, quota.minDelaySec + 10)} detik</option>
                   <option value="extra">Sangat Aman: {Math.max(20, quota.minDelaySec)}–{Math.max(40, quota.minDelaySec + 20)} detik</option>
                   <option value="fast">Cepat: {Math.max(5, quota.minDelaySec)}–{Math.max(10, quota.minDelaySec + 5)} detik</option>
-                </select>
+                </Select>
               </div>
             </div>
 

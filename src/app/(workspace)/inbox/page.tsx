@@ -60,16 +60,29 @@ function InboxWorkspaceInner() {
           return tB - tA;
         });
 
+        const chatKey = (c: any) =>
+          [
+            c.id,
+            c.lastMessage,
+            c.unreadCount,
+            c.status,
+            c.assigneeId,
+            c.reminderAt,
+            c.reminderNote,
+            c.contact?.id,
+            c.contact?.tags,
+            c.contact?.name,
+            c.contact?.storeName,
+            c.contact?.businessCategory,
+            c.contact?.isWAUser,
+          ].join(':');
+
         setChats((prev) => {
           const next = sorted.map((c: any) =>
             c.id === activeChatIdRef.current ? { ...c, unreadCount: 0 } : c
           );
-          const prevKey = prev
-            .map((c) => `${c.id}:${c.lastMessage}:${c.unreadCount}:${c.status}:${c.assigneeId}:${c.reminderAt}`)
-            .join('|');
-          const nextKey = next
-            .map((c) => `${c.id}:${c.lastMessage}:${c.unreadCount}:${c.status}:${c.assigneeId}:${c.reminderAt}`)
-            .join('|');
+          const prevKey = prev.map(chatKey).join('|');
+          const nextKey = next.map(chatKey).join('|');
           return prevKey === nextKey ? prev : next;
         });
       }
@@ -351,7 +364,22 @@ function InboxWorkspaceInner() {
               onCompleteReminder={async () => {
                 await patchChatMeta({ clearReminder: true }, 'Pengingat follow-up ditandai selesai');
               }}
-              onContactUpdated={() => {
+              onContactUpdated={(updatedContact) => {
+                if (updatedContact) {
+                  // Apply immediately so tags/profile change without waiting for the next poll
+                  setChats((prev) =>
+                    prev.map((c) =>
+                      c.id === selectedChatId
+                        ? { ...c, contactId: updatedContact.id, contact: updatedContact }
+                        : c
+                    )
+                  );
+                  setContacts((prev) =>
+                    prev.some((c) => c.id === updatedContact.id)
+                      ? prev.map((c) => (c.id === updatedContact.id ? updatedContact : c))
+                      : [updatedContact, ...prev]
+                  );
+                }
                 fetchContacts();
                 fetchChats();
               }}

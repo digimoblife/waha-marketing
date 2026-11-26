@@ -220,6 +220,14 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    // Always link the chat to this contact so contact edits (tags, store name) show up in the Inbox
+    if (contact) {
+      await prisma.chat.updateMany({
+        where: { id: jid, contactId: null },
+        data: { contactId: contact.id },
+      });
+    }
+
     // Also update chat name if chat exists
     if (name) {
       await prisma.chat.updateMany({

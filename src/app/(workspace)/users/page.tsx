@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Loader2, X, AlertCircle } from 'lucide-react';
 import { useWorkspace } from '@/components/WorkspaceContext';
+import Select from '@/components/ui/Select';
 
 export default function UsersPage() {
   const { notify } = useWorkspace();
@@ -222,14 +223,14 @@ export default function UsersPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-[#0F232E] mb-1">Role</label>
-                  <select
+                  <Select
                     value={role}
-                    onChange={(e) => setRole(e.target.value as 'OPERATOR' | 'ADMIN')}
+                    onChange={(v) => setRole(v as 'OPERATOR' | 'ADMIN')}
                     className="w-full h-9 px-3 border border-[#B0C4CF] rounded-md text-[13px] bg-white focus:outline-none focus:border-[#00688E]"
                   >
                     <option value="OPERATOR">OPERATOR (Inbox, Merchant, Broadcast, Template)</option>
                     <option value="ADMIN">ADMIN (Akses Penuh + Monitoring & Pengaturan)</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 

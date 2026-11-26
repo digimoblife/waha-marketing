@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Plus, Save } from 'lucide-react';
 import { useWorkspace } from '@/components/WorkspaceContext';
+import Select from '@/components/ui/Select';
 
 type SettingsTab = 'guardrail' | 'sla' | 'waha' | 'tags';
 
@@ -282,14 +283,14 @@ export default function AdminSettingsPage() {
                           Pilih apakah obrolan baru dibiarkan Unassigned atau dibagi rata otomatis.
                         </div>
                       </div>
-                      <select
+                      <Select
                         value={assignMode}
-                        onChange={(e) => setAssignMode(e.target.value as 'MANUAL' | 'ROUND_ROBIN')}
+                        onChange={(v) => setAssignMode(v as 'MANUAL' | 'ROUND_ROBIN')}
                         className="w-full sm:w-56 h-9 px-2.5 border border-[#B0C4CF] rounded-md text-xs bg-white"
                       >
                         <option value="MANUAL">Manual (Unassigned)</option>
                         <option value="ROUND_ROBIN">Auto-Assign (Round-Robin)</option>
-                      </select>
+                      </Select>
                     </div>
 
                     <div className="px-5 py-4 flex items-center justify-between gap-3">

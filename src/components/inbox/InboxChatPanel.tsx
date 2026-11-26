@@ -22,6 +22,7 @@ import {
 import { formatDisplayPhone } from '@/lib/phone';
 import { interpolateTemplate } from '@/lib/template-utils';
 import EmojiPickerPopover from './EmojiPickerPopover';
+import Select from '@/components/ui/Select';
 
 interface InboxChatPanelProps {
   chatId: string;
@@ -310,9 +311,9 @@ export default function InboxChatPanel({
 
         {/* Right Controls: PIC Assignee + Status + Inspector Toggle */}
         <div className="flex items-center gap-1.5 w-full md:w-auto justify-between md:justify-end shrink-0">
-          <select
+          <Select
             value={chatData?.assigneeId || ''}
-            onChange={(e) => onChangeAssignee(e.target.value)}
+            onChange={(v) => onChangeAssignee(v)}
             title="PIC Operator"
             className="flex-1 md:flex-none md:w-[132px] h-7 px-2 border border-[#B0C4CF] rounded-md text-[11.5px] font-medium bg-white text-[#0F232E] focus:outline-none focus:border-[#00688E]"
           >
@@ -322,18 +323,18 @@ export default function InboxChatPanel({
                 PIC: {op.name}
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             value={chatData?.status || 'OPEN'}
-            onChange={(e) => onChangeStatus(e.target.value)}
+            onChange={(v) => onChangeStatus(v)}
             title="Status Percakapan"
             className="flex-1 md:flex-none md:w-[108px] h-7 px-2 border border-[#B0C4CF] rounded-md text-[11.5px] font-medium bg-white text-[#0F232E] focus:outline-none focus:border-[#00688E]"
           >
             <option value="OPEN">● Open</option>
             <option value="FOLLOW_UP">● Follow Up</option>
             <option value="RESOLVED">● Selesai</option>
-          </select>
+          </Select>
 
           <button
             type="button"
