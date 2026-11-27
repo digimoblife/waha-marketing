@@ -18,6 +18,7 @@ import {
   PanelRight,
   ChevronDown,
   WifiOff,
+  ExternalLink,
 } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
 import { interpolateTemplate } from '@/lib/template-utils';
@@ -57,6 +58,45 @@ interface PendingFile {
   previewUrl: string | null;
   isImage: boolean;
   sizeLabel: string;
+}
+
+const URL_SPLIT_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+const URL_TEST_REGEX = /^(https?:\/\/|www\.)/i;
+
+function renderMessageBody(content: string, fromMe: boolean) {
+  if (!content) return null;
+  const parts = content.split(URL_SPLIT_REGEX);
+
+  return parts.map((part, idx) => {
+    if (!part) return null;
+    if (URL_TEST_REGEX.test(part)) {
+      const trailingMatch = part.match(/[.,!?;:)\]]+$/);
+      const trailing = trailingMatch ? trailingMatch[0] : '';
+      const cleanUrl = trailing ? part.slice(0, -trailing.length) : part;
+      const href = /^https?:\/\//i.test(cleanUrl) ? cleanUrl : `https://${cleanUrl}`;
+
+      return (
+        <React.Fragment key={idx}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`underline font-medium break-all inline-flex items-center gap-0.5 transition cursor-pointer ${
+              fromMe
+                ? 'text-[#BED630] hover:text-[#EFF7CC]'
+                : 'text-[#00688E] hover:text-[#005575]'
+            }`}
+          >
+            <span>{cleanUrl}</span>
+            <ExternalLink className="w-3 h-3 inline-block shrink-0 opacity-85 ml-0.5" />
+          </a>
+          {trailing}
+        </React.Fragment>
+      );
+    }
+    return <React.Fragment key={idx}>{part}</React.Fragment>;
+  });
 }
 
 export default function InboxChatPanel({
@@ -532,7 +572,7 @@ export default function InboxChatPanel({
                         </a>
                       )}
 
-                      {m.body && <span>{m.body}</span>}
+                      {m.body && <span>{renderMessageBody(m.body, Boolean(m.fromMe))}</span>}
                     </div>
 
                     {!m.fromMe && (
