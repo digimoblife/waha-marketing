@@ -23,6 +23,7 @@ import {
 import { formatDisplayPhone } from '@/lib/phone';
 import { interpolateTemplate } from '@/lib/template-utils';
 import EmojiPickerPopover from './EmojiPickerPopover';
+import LinkPreviewCard from './LinkPreviewCard';
 import Select from '@/components/ui/Select';
 
 interface InboxChatPanelProps {
@@ -62,6 +63,20 @@ interface PendingFile {
 
 const URL_SPLIT_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 const URL_TEST_REGEX = /^(https?:\/\/|www\.)/i;
+
+function extractFirstUrl(content?: string | null): string | null {
+  if (!content) return null;
+  const match = content.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/i);
+  if (!match) return null;
+  const raw = match[0].replace(/[.,!?;:)\]]+$/, '');
+  const href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    new URL(href);
+    return href;
+  } catch {
+    return null;
+  }
+}
 
 function renderMessageBody(content: string, fromMe: boolean) {
   if (!content) return null;
@@ -573,6 +588,14 @@ export default function InboxChatPanel({
                       )}
 
                       {m.body && <span>{renderMessageBody(m.body, Boolean(m.fromMe))}</span>}
+
+                      {/* Interactive Link Preview Card (OG metadata + fallback domain card) */}
+                      {(() => {
+                        const firstUrl = !m.mediaUrl ? extractFirstUrl(m.body) : null;
+                        return firstUrl ? (
+                          <LinkPreviewCard url={firstUrl} fromMe={Boolean(m.fromMe)} />
+                        ) : null;
+                      })()}
                     </div>
 
                     {!m.fromMe && (
