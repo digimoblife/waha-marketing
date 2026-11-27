@@ -57,7 +57,7 @@ interface InboxChatPanelProps {
 interface PendingFile {
   file: File;
   previewUrl: string | null;
-  isImage: boolean;
+  kind: 'image' | 'video' | 'audio' | 'document';
   sizeLabel: string;
 }
 
@@ -142,6 +142,7 @@ export default function InboxChatPanel({
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [quickReplyOpen, setQuickReplyOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
@@ -194,23 +195,50 @@ export default function InboxChatPanel({
     .slice(0, 2)
     .toUpperCase();
 
-  const handleFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const attachFile = (file: File) => {
     if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl);
 
-    const isImage = file.type.startsWith('image/');
-    const previewUrl = isImage ? URL.createObjectURL(file) : null;
+    const mime = file.type || '';
+    const kind: PendingFile['kind'] = mime.startsWith('image/')
+      ? 'image'
+      : mime.startsWith('video/')
+      ? 'video'
+      : mime.startsWith('audio/')
+      ? 'audio'
+      : 'document';
+    const previewUrl = kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null;
     const sizeLabel =
       file.size > 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
         : `${Math.max(1, Math.round(file.size / 1024))} KB`;
 
-    setPendingFile({ file, previewUrl, isImage, sizeLabel });
-    e.target.value = '';
+    setPendingFile({ file, previewUrl, kind, sizeLabel });
     setEmojiOpen(false);
     setQuickReplyOpen(false);
     textareaRef.current?.focus();
+  };
+
+  const handleFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    attachFile(file);
+    e.target.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file' && (item.type.startsWith('image/') || item.type.startsWith('video/'))) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          attachFile(file);
+          return;
+        }
+      }
+    }
   };
 
   const handleInsertEmoji = (emoji: string) => {
@@ -547,20 +575,38 @@ export default function InboxChatPanel({
 
                       {/* Media Render */}
                       {m.mediaUrl && m.mediaType === 'image' && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={m.mediaUrl}
-                          alt={m.fileName || 'Gambar'}
-                          onClick={() => setLightboxUrl(m.mediaUrl)}
-                          className="w-[240px] max-w-full rounded-md mb-1.5 cursor-zoom-in border border-black/10"
-                        />
+                        failedImages[m.id] ? (
+                          <div
+                            className={`mb-1.5 px-3 py-2 rounded-md border text-xs ${
+                              m.fromMe
+                                ? 'bg-white/10 border-white/20 text-white/80'
+                                : 'bg-[#F4F8FA] border-[#D1DEE5] text-[#5C7685]'
+                            }`}
+                          >
+                            Gambar tidak tersedia / kedaluwarsa
+                          </div>
+                        ) : (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={m.mediaUrl}
+                            alt={m.fileName || 'Gambar'}
+                            loading="lazy"
+                            onClick={() => setLightboxUrl(m.mediaUrl)}
+                            onError={() =>
+                              setFailedImages((prev) => ({ ...prev, [m.id]: true }))
+                            }
+                            className="w-[240px] max-w-full max-h-[280px] object-cover rounded-md mb-1.5 cursor-zoom-in border border-black/10 block bg-black/5"
+                          />
+                        )
                       )}
 
                       {m.mediaUrl && m.mediaType === 'video' && (
                         <video
                           src={m.mediaUrl}
                           controls
-                          className="w-[260px] max-w-full rounded-md mb-1.5"
+                          playsInline
+                          preload="metadata"
+                          className="w-[280px] max-w-full max-h-[300px] rounded-md mb-1.5 bg-black block"
                         />
                       )}
 
@@ -742,16 +788,26 @@ export default function InboxChatPanel({
         {pendingFile && (
           <div className="mb-2 px-2.5 py-2 rounded-md bg-[#F4F8FA] border border-[#D1DEE5] flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              {pendingFile.isImage && pendingFile.previewUrl ? (
+              {pendingFile.kind === 'image' && pendingFile.previewUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={pendingFile.previewUrl}
-                  alt="Preview"
-                  className="w-10 h-10 rounded object-cover border border-[#D1DEE5] shrink-0"
+                  alt="Preview gambar"
+                  onClick={() => setLightboxUrl(pendingFile.previewUrl)}
+                  title="Klik untuk perbesar"
+                  className="w-14 h-14 rounded-md object-cover border border-[#D1DEE5] shrink-0 cursor-zoom-in bg-white"
+                />
+              ) : pendingFile.kind === 'video' && pendingFile.previewUrl ? (
+                <video
+                  src={pendingFile.previewUrl}
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className="w-20 h-14 rounded-md object-cover border border-[#D1DEE5] shrink-0 bg-black"
                 />
               ) : (
-                <div className="w-10 h-10 rounded bg-white border border-[#D1DEE5] flex items-center justify-center text-[#00688E] shrink-0">
-                  <FileText className="w-4 h-4" />
+                <div className="w-12 h-12 rounded-md bg-white border border-[#D1DEE5] flex items-center justify-center text-[#00688E] shrink-0">
+                  <FileText className="w-5 h-5" />
                 </div>
               )}
               <div className="min-w-0">
@@ -759,7 +815,14 @@ export default function InboxChatPanel({
                   {pendingFile.file.name}
                 </div>
                 <div className="text-[11px] text-[#5C7685] tabular-nums">
-                  {pendingFile.sizeLabel} • Siap dikirim bersama caption di bawah
+                  {pendingFile.kind === 'video'
+                    ? 'Video'
+                    : pendingFile.kind === 'image'
+                    ? 'Gambar'
+                    : pendingFile.kind === 'audio'
+                    ? 'Audio'
+                    : 'Dokumen'}{' '}
+                  • {pendingFile.sizeLabel} • Siap dikirim
                 </div>
               </div>
             </div>
@@ -780,6 +843,7 @@ export default function InboxChatPanel({
             rows={1}
             value={text}
             onChange={(e) => handleTextChange(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -861,13 +925,24 @@ export default function InboxChatPanel({
           onClick={() => setLightboxUrl(null)}
         >
           <div className="relative max-w-[90vw] max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => setLightboxUrl(null)}
-              className="absolute -top-9 right-0 text-white text-xs font-semibold px-2.5 py-1 rounded bg-white/15 hover:bg-white/25 cursor-pointer"
-            >
-              Tutup ✕
-            </button>
+            <div className="absolute -top-9 right-0 flex items-center gap-2">
+              <a
+                href={lightboxUrl}
+                download
+                target="_blank"
+                rel="noreferrer"
+                className="text-white text-xs font-semibold px-2.5 py-1 rounded bg-white/15 hover:bg-white/25 inline-flex items-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" /> Unduh
+              </a>
+              <button
+                type="button"
+                onClick={() => setLightboxUrl(null)}
+                className="text-white text-xs font-semibold px-2.5 py-1 rounded bg-white/15 hover:bg-white/25 cursor-pointer"
+              >
+                Tutup ✕
+              </button>
+            </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={lightboxUrl}
