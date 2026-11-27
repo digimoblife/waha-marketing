@@ -7,6 +7,7 @@ import { sanitizePhone, normalizeJid } from '@/lib/phone';
 import { createLog } from '@/lib/logger';
 import { markMessageProcessed, extractStanzaId } from '@/lib/msg-cache';
 import { detectMediaType, downloadWahaMedia, isWahaInternalMediaUrl } from '@/lib/waha-media';
+import { cancelDebouncedChat } from '@/lib/agent/debouncer';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,7 +164,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Cancel any pending AI debounce timer immediately because a human operator is replying manually
+    const keepAiActive = Boolean(body.keepAiActive);
+    if (!keepAiActive) {
+      cancelDebouncedChat(chatId);
+    }
+
     // 2. Ensure Chat exists in database FIRST before creating Message (satisfy foreign key)
+    // Invariant #3: Manual operator reply automatically switches agentMode to HUMAN_TAKEOVER
     await prisma.chat.upsert({
       where: { id: chatId },
       create: {
@@ -172,12 +180,14 @@ export async function POST(req: NextRequest) {
         lastMessage: messageSnippet,
         lastMessageAt: timestamp,
         unreadCount: 0,
+        agentMode: keepAiActive ? 'AI_ACTIVE' : 'HUMAN_TAKEOVER',
         contactId: contact?.id || null,
       },
       update: {
         lastMessage: messageSnippet,
         lastMessageAt: timestamp,
         unreadCount: 0,
+        ...(keepAiActive ? {} : { agentMode: 'HUMAN_TAKEOVER' }),
         contactId: contact?.id || undefined,
       },
     });

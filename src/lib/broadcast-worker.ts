@@ -124,6 +124,18 @@ async function runBroadcastLoop(campaignId: string) {
       const msgId = typeof rawId === 'string' ? rawId : rawId?._serialized || `bc_${Date.now()}`;
       markMessageProcessed(msgId);
 
+      const campaignCtxPayload = campaign.enableAiFollowup
+        ? JSON.stringify({
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+            goal:
+              campaign.campaignGoal ||
+              'Follow-up awareness seller Lapaq yang belum menyelesaikan setup toko atau upload produk',
+            openerSent: personalizedText,
+            sentAt: timestamp.toISOString(),
+          })
+        : undefined;
+
       // Ensure Chat exists and store Message so history appears in Inbox
       await prisma.chat.upsert({
         where: { id: nextRecipient.jid },
@@ -133,11 +145,16 @@ async function runBroadcastLoop(campaignId: string) {
           lastMessage: personalizedText,
           lastMessageAt: timestamp,
           unreadCount: 0,
+          agentMode: campaign.enableAiFollowup ? 'AI_ACTIVE' : 'HUMAN_TAKEOVER',
+          campaignContext: campaignCtxPayload || null,
           contactId: nextRecipient.contactId || null,
         },
         update: {
           lastMessage: personalizedText,
           lastMessageAt: timestamp,
+          ...(campaign.enableAiFollowup
+            ? { agentMode: 'AI_ACTIVE', campaignContext: campaignCtxPayload }
+            : {}),
         },
       });
 

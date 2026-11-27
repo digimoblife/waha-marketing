@@ -1,0 +1,642 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-27T13:07:26.549Z",
+  "totalChunks": 58,
+  "chunks": [
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:coupon_system",
+      "title": "Panduan & Lokasi Pengaturan Add-on Kupon Diskon",
+      "category": "addon",
+      "content": "Add-on Lapaq: Kupon Diskon (kode: coupon_system)\nCara & Lokasi Konfigurasi: Menu Kupon (/coupons) untuk kupon diskon biasa, atau detail Pesanan terbayar untuk menerbitkan Kupon Retensi.\nPerilaku & Pembaruan Terbaru:\n- Potongan kupon ongkir tidak mencakup biaya asuransi pengiriman. Rincian ongkir dan asuransi ditampilkan terpisah pada ringkasan pesanan.\n- Kupon dapat disimpan tanpa tanggal mulai, tanggal berakhir, atau kuota. Periode kosong tampil sebagai Tanpa batas; tanggal yang diisi tetap diperiksa urutannya.\n- Isian kupon checkout kini berada pada ringkasan pesanan yang dapat dibuka di ponsel. Pemeriksaan email, potongan dan konfirmasi penghapusan kupon tetap berlaku.\n- Informasi kupon retensi tidak lagi disertakan dalam email konfirmasi pembayaran karena notifikasi transaksi pembeli kini dikirim sekali saat pesanan dibuat. Kupon tetap dibuat sesuai pengaturan dan dapat dikelola serta dicetak dari detail pesanan.\n- Laporan Kupon menampilkan keadaan kosong dan menonaktifkan ekspor CSV jika belum ada pemakaian kupon pada periode yang dipilih, termasuk ketika sudah ada pesanan tanpa kupon.",
+      "structuredMeta": {
+        "addOnCode": "coupon_system",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:featured_products",
+      "title": "Panduan & Lokasi Pengaturan Add-on Produk Unggulan",
+      "category": "addon",
+      "content": "Add-on Lapaq: Produk Unggulan (kode: featured_products)\nCara & Lokasi Konfigurasi: Klik ikon bintang pada daftar Produk Fisik atau Produk Digital (maksimal 5 produk gabungan) lalu klik Simpan perubahan.\nPerilaku & Pembaruan Terbaru:\n- Bentuk tombol Produk Unggulan kini mengikuti pengaturan Tombol. Pilihan Siku, Semi-round, Rounded, atau Pill berlaku konsisten pada tombol aksi etalase, bukan hanya kartu produk.\n- Posisi judul Produk Unggulan kini mengikuti Tampilan section tanpa pengaturan terpisah. Pilihan judul tengah dengan panah bawah dihapus; toko yang sebelumnya memakainya beralih ke judul kiri dengan panah atas tanpa mengubah warna dan gaya kartu.\n- Bagian Produk Unggulan kini mengikuti warna latar toko tanpa panel warna tambahan pada semua pilihan susunan. Judul mengikuti warna teks toko agar tetap terbaca pada latar terang maupun gelap.\n- Gaya kartu, inset tombol, panel warna, serta posisi panah atas/samping/bawah kini mengikuti pilihan Pengaturan Tampilan dengan lebih konsisten. Pratinjau memperbarui posisi panah dan susunan produk langsung; kartu dan panel tetap rapi pada ponsel.\n- Pengaturan Tampilan toko kini menyediakan pilihan gaya kartu, posisi judul, susunan carousel atau grid, serta bentuk tombol produk unggulan dengan pratinjau langsung. Pilihan produk dan batas lima slot tetap dipertahankan.",
+      "structuredMeta": {
+        "addOnCode": "featured_products",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:whatsapp_floating",
+      "title": "Panduan & Lokasi Pengaturan Add-on WhatsApp Mengambang",
+      "category": "addon",
+      "content": "Add-on Lapaq: WhatsApp Mengambang (kode: whatsapp_floating)\nCara & Lokasi Konfigurasi: Menu Pengaturan > tab Umum > isi Nomor WhatsApp tanpa angka 0 di depan.\nPerilaku & Pembaruan Terbaru:\n- Tombol WhatsApp di ponsel dinaikkan agar tidak menutupi tautan footer dan menyesuaikan posisi saat panel cookie terbuka.\n- Pada keranjang di ponsel, tombol WhatsApp ditempatkan setelah isi keranjang agar tidak menutupi tombol checkout dan tetap dapat diakses.\n- Tanya penjual pada detail produk memakai ikon WhatsApp dan jarak tampilan sesuai desain etalase. Nomor kontak serta aturan aktivasi add-on tetap dipertahankan.\n- Tombol WhatsApp pada etalase tampil sebagai ikon bulat mengikuti desain baru; nomor kontak dan aturan aktivasi tetap memakai pengaturan toko.\n- Nomor WhatsApp di Pengaturan Umum memakai awalan +62 terpisah. Masukkan nomor tanpa 0 di depan; nomor disimpan dalam format internasional untuk tombol WhatsApp toko.",
+      "structuredMeta": {
+        "addOnCode": "whatsapp_floating",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:social_media",
+      "title": "Panduan & Lokasi Pengaturan Add-on Media Sosial & Marketplace",
+      "category": "addon",
+      "content": "Add-on Lapaq: Media Sosial & Marketplace (kode: social_media)\nCara & Lokasi Konfigurasi: Menu Pengaturan > tab Umum > bagian Media sosial dan marketplace.\nPerilaku & Pembaruan Terbaru:\n- Border luar ikon media sosial dan marketplace di footer toko dihapus agar tidak bertumpuk dengan latar ikon. Area klik tetap nyaman dan penanda fokus keyboard tetap tersedia.\n- Ikon media sosial dan marketplace di footer etalase mengikuti tata letak baru yang responsif. Tautan tersimpan dan aturan aktivasi tetap dipertahankan.\n- Tautan toko yang aktif kini tampil pada bagian Ikuti kami di email transaksi, permintaan ulasan, dan pengingat keranjang pembeli.\n- Tautan media sosial dan marketplace kini diatur dalam bagian tersendiri di Pengaturan Umum, dengan isian dua kolom pada desktop.\n- Atur tautan media sosial dan marketplace yang ditampilkan pada footer etalase.",
+      "structuredMeta": {
+        "addOnCode": "social_media",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:ticker_bar",
+      "title": "Panduan & Lokasi Pengaturan Add-on Ticker Bar (Teks Berjalan)",
+      "category": "addon",
+      "content": "Add-on Lapaq: Ticker Bar (Teks Berjalan) (kode: ticker_bar)\nCara & Lokasi Konfigurasi: Klik tombol Kelola pada detail Add-on atau buka Pengaturan > Informasi Toko untuk mengisi teks berjalan, dan Pengaturan > Tampilan toko untuk memilih gaya ticker.\nPerilaku & Pembaruan Terbaru:\n- Teks pengumuman ticker bar kini menggunakan font body toko, format huruf normal tanpa paksaan huruf kapital, dan ukuran font yang serasi dengan teks konten toko.\n- Ticker Tipe 6 kini mengikuti warna latar dan teks toko, tanpa latar putih terpisah, agar tetap menyatu dengan tema terang maupun gelap.\n- Panah ticker Tipe 1 dan Tipe 5 kini memakai ikon SVG yang konsisten dan tepat di tengah tombol, tanpa bergantung pada bentuk huruf font. Posisi navigasi tetap di ujung kiri dan kanan.\n- Lebar ticker Tipe 6 kini sejajar dengan konten navbar mengikuti pilihan 960, 1200, atau 1440px serta margin mobile. Pilihan 1440px tidak lagi dibatasi maksimum lama 1200px.\n- Ikon biji kopi pada ticker Tipe 6 dihapus sehingga hanya teks pengumuman yang berjalan. Latar putih, teks gelap, dan posisi di bawah navbar tetap dipertahankan.",
+      "structuredMeta": {
+        "addOnCode": "ticker_bar",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:store_schedule",
+      "title": "Panduan & Lokasi Pengaturan Add-on Jadwal Operasional Toko",
+      "category": "addon",
+      "content": "Add-on Lapaq: Jadwal Operasional Toko (kode: store_schedule)\nCara & Lokasi Konfigurasi: Menu Pengaturan > Informasi Toko (jam buka 7 hari).\nPerilaku & Pembaruan Terbaru:\n- Jam operasional yang diizinkan tampil mengikuti tata letak footer etalase yang baru. Jadwal tetap tersembunyi ketika katalog atau add-on dinonaktifkan.\n- Ikon mahkota di Informasi Toko kini hanya tampil jika add-on berbayar belum memiliki akses aktif. Add-on gratis atau yang sudah dibeli tidak menampilkan mahkota, termasuk saat dinonaktifkan.\n- Visibilitas Jadwal Toko di Pengaturan merchant kini mengikuti status tampil pada katalog Superadmin. Add-on yang disembunyikan tidak tampil di direktori atau storefront; data jadwal dan pemasangan tetap tersimpan.\n- Atur jadwal operasional tujuh hari untuk ditampilkan pada etalase.\n- Foto produk dari file impor kini ikut tersimpan pada produk hasil impor, sampai 5 foto per produk sesuai batas foto di editor produk.",
+      "structuredMeta": {
+        "addOnCode": "store_schedule",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:product_import",
+      "title": "Panduan & Lokasi Pengaturan Add-on Impor Produk Massal",
+      "category": "addon",
+      "content": "Add-on Lapaq: Impor Produk Massal (kode: product_import)\nCara & Lokasi Konfigurasi: Buka Produk Fisik/Digital > klik tombol Impor (mendukung CSV/XLSX Shopee, TikTok Shop, template CSV, atau ekstensi Chrome Lapaq Migrator). 1 produk berhasil = 1 kuota impor; sisa kuota tidak hangus.\nPerilaku & Pembaruan Terbaru:\n- Foto produk dari file impor kini ikut tersimpan pada produk hasil impor, sampai 5 foto per produk sesuai batas foto di editor produk.\n- Foto yang tidak dapat diambil dilewati tanpa membatalkan produknya, dan jumlahnya ditampilkan pada hasil impor.\n- Pemeriksaan pembayaran kuota sebelumnya lebih andal agar status kedaluwarsa dapat diperbarui dan pembelian berikutnya dapat dilanjutkan.\n- Pembayaran yang tertunda diperiksa otomatis secara berkala tanpa perlu membuka halaman pembayaran.\n- Pembelian kuota mendukung Virtual Account sesuai metode pembayaran yang tersedia. Nomor pembayaran dapat disalin dan kuota bertambah setelah pembayaran terverifikasi.",
+      "structuredMeta": {
+        "addOnCode": "product_import",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:xtra_product",
+      "title": "Panduan & Lokasi Pengaturan Add-on Xtra Product (+200 Slot Produk)",
+      "category": "addon",
+      "content": "Add-on Lapaq: Xtra Product (+200 Slot Produk) (kode: xtra_product)\nCara & Lokasi Konfigurasi: Menu Add-on > Xtra Product. Menambah kapasitas produk toko sebanyak 200 slot permanen per paket (mencakup fisik, digital, draft, nonaktif; varian tidak dihitung produk terpisah).\nPerilaku & Pembaruan Terbaru:\n- Pemeriksaan pembayaran paket sebelumnya lebih andal agar status kedaluwarsa dapat diperbarui dan pembelian berikutnya dapat dilanjutkan.\n- Pembayaran yang tertunda diperiksa otomatis secara berkala tanpa perlu membuka halaman pembayaran.\n- Pembayaran paket tambahan mendukung Virtual Account sesuai metode pembayaran yang tersedia, dengan nomor pembayaran yang dapat disalin dan status terkonfirmasi otomatis.\n- Tambah kapasitas toko sebanyak 200 produk dengan Rp25.000 sekali bayar per paket. Pembelian dapat diulang dan kapasitas berlaku permanen setelah pembayaran terkonfirmasi.\n- Kapasitas mencakup produk fisik, digital, draft, dan nonaktif. Varian tidak dihitung sebagai produk terpisah. Kuota impor tetap terpisah.",
+      "structuredMeta": {
+        "addOnCode": "xtra_product",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:stock_lock",
+      "title": "Panduan & Lokasi Pengaturan Add-on Stock Lock (Batas Min/Maks Pembelian)",
+      "category": "addon",
+      "content": "Add-on Lapaq: Stock Lock (Batas Min/Maks Pembelian) (kode: stock_lock)\nCara & Lokasi Konfigurasi: Diatur langsung pada formulir Tambah Produk atau Edit Produk (per produk atau per varian, minimal pembelian >= 1).\nPerilaku & Pembaruan Terbaru:\n- Pemeriksaan pembayaran sebelumnya lebih andal agar status kedaluwarsa dapat diperbarui dan pembelian berikutnya dapat dilanjutkan.\n- Pembayaran yang tertunda diperiksa otomatis secara berkala tanpa perlu membuka halaman pembayaran.\n- Pembelian mendukung Virtual Account sesuai metode pembayaran yang tersedia. Nomor pembayaran dapat disalin dan akses aktif setelah pembayaran terverifikasi.\n- Saat promo berlangsung, Kakak bisa memakai Stock Lock secara gratis untuk mengatur jumlah minimum dan maksimum pembelian setiap produk atau varian.\n- Label biaya pada pembayaran add-on kini menjadi Biaya Payment Gateway. Nominal dan perhitungan biaya tetap sama.",
+      "structuredMeta": {
+        "addOnCode": "stock_lock",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:low_stock_alerts",
+      "title": "Panduan & Lokasi Pengaturan Add-on Info Stok Menipis (Limit Stok)",
+      "category": "addon",
+      "content": "Add-on Lapaq: Info Stok Menipis (Limit Stok) (kode: low_stock_alerts)\nCara & Lokasi Konfigurasi: Buka menu Add-on di sidebar kiri > pilih Info Stok Menipis > pastikan add-on sudah Aktif > klik tombol Kelola (membuka tab Konfigurasi) > pada kartu \"Batas Minimum Stok\" isi angka pada kolom \"Jumlah stok minimum\" (0 sampai 99.999, bawaan 5) > klik tombol \"Simpan Pengaturan\". Jika add-on belum diaktifkan, kolom akan terkunci dengan pesan \"Aktifkan add-on untuk mengubah pengaturan.\"\nPerilaku & Pembaruan Terbaru:\n- Tab, ringkasan dashboard, dan angka laporan Stok menipis disembunyikan saat add-on tidak aktif. Akses langsung tetap mengikuti status aktivasi.\n- Penanda add-on pada kotak Stok menipis di dashboard kini memakai ikon mahkota, menggantikan teks Add-on.\n- Laporan Stok produk kini menampilkan jumlah produk dengan stok satu sampai lima sebagai Stok menipis saat add-on aktif. Stok varian aktif dijumlahkan dan produk pre order dikecualikan.\n- Tab Stok Menipis pada daftar produk fisik menampilkan produk dengan sisa stok satu sampai lima, termasuk jumlah stok varian aktif. Kuota pre-order tidak dihitung sebagai stok menipis.\n- Pengaturan batas minimum stok kini berada di tab Konfigurasi pada detail add-on. Aktifkan add-on sebelum mengubah batas stok.",
+      "structuredMeta": {
+        "addOnCode": "low_stock_alerts",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:store_reviews",
+      "title": "Panduan & Lokasi Pengaturan Add-on Ulasan dan Rating Toko",
+      "category": "addon",
+      "content": "Add-on Lapaq: Ulasan dan Rating Toko (kode: store_reviews)\nCara & Lokasi Konfigurasi: Menu Ulasan dan rating (/reviews) untuk menampilkan/menyembunyikan ulasan pembeli.\nPerilaku & Pembaruan Terbaru:\n- Pemeriksaan pembayaran sebelumnya lebih andal agar status kedaluwarsa dapat diperbarui dan pembelian berikutnya dapat dilanjutkan.\n- Pembayaran yang tertunda diperiksa otomatis secara berkala tanpa perlu membuka halaman pembayaran.\n- Pembelian mendukung Virtual Account sesuai metode pembayaran yang tersedia. Nomor pembayaran dapat disalin dan akses aktif setelah pembayaran terverifikasi.\n- Saat promo berlangsung, Kakak bisa memakai Ulasan dan Rating secara gratis. Kumpulkan pengalaman belanja pembeli untuk membantu pelanggan baru lebih yakin berbelanja di toko Kakak.\n- Label biaya pada pembayaran add-on kini menjadi Biaya Payment Gateway. Nominal dan perhitungan biaya tetap sama.",
+      "structuredMeta": {
+        "addOnCode": "store_reviews",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:merchant_analytics",
+      "title": "Panduan & Lokasi Pengaturan Add-on Analitik dan Pixel (GA4, GTM, Meta Pixel)",
+      "category": "addon",
+      "content": "Add-on Lapaq: Analitik dan Pixel (GA4, GTM, Meta Pixel) (kode: merchant_analytics)\nCara & Lokasi Konfigurasi: Aktifkan add-on di menu Add-on lalu hubungkan ID GA4, Google Tag Manager, atau Meta Pixel melalui menu Pengaturan.\nPerilaku & Pembaruan Terbaru:\n- Pemeriksaan pembayaran sebelumnya lebih andal agar status kedaluwarsa dapat diperbarui dan pembelian berikutnya dapat dilanjutkan.\n- Pembayaran yang tertunda diperiksa otomatis secara berkala tanpa perlu membuka halaman pembayaran.\n- Pembelian mendukung Virtual Account sesuai metode pembayaran yang tersedia. Nomor pembayaran dapat disalin dan akses aktif setelah pembayaran terverifikasi.\n- Saat promo berlangsung, Kakak bisa memakai Analitik dan Pixel secara gratis untuk memahami kunjungan dan aktivitas belanja di toko. Aktifkan add-on, lalu hubungkan ID analitik atau pixel toko Kakak melalui Pengaturan.\n- Google Analytics 4 dan Google Tag Manager kini tersedia di Analitik dan pixel, bersama Meta Pixel. Pilih melalui ID Google yang digunakan toko.",
+      "structuredMeta": {
+        "addOnCode": "merchant_analytics",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:remove_footer_branding",
+      "title": "Panduan & Lokasi Pengaturan Add-on Hapus Branding Footer",
+      "category": "addon",
+      "content": "Add-on Lapaq: Hapus Branding Footer (kode: remove_footer_branding)\nCara & Lokasi Konfigurasi: Otomatis menyembunyikan tulisan Powered By Lapaq di footer toko begitu add-on berstatus Aktif.\nPerilaku & Pembaruan Terbaru:\n- Pemeriksaan pembayaran sebelumnya lebih andal agar status kedaluwarsa dapat diperbarui dan pembelian berikutnya dapat dilanjutkan.\n- Pembayaran yang tertunda diperiksa otomatis secara berkala tanpa perlu membuka halaman pembayaran.\n- Pembelian mendukung Virtual Account sesuai metode pembayaran yang tersedia. Nomor pembayaran dapat disalin dan akses aktif setelah pembayaran terverifikasi.\n- Saat promo berlangsung, Kakak bisa menyembunyikan branding Lapaq pada footer toko secara gratis. Aktifkan add-on agar tampilan toko lebih berfokus pada merek Kakak.\n- Label biaya pada pembayaran add-on kini menjadi Biaya Payment Gateway. Nominal dan perhitungan biaya tetap sama.",
+      "structuredMeta": {
+        "addOnCode": "remove_footer_branding",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "REPO_BUNDLE",
+      "sourceKey": "addon:abandoned_cart",
+      "title": "Panduan & Lokasi Pengaturan Add-on Keranjang Ditinggalkan",
+      "category": "addon",
+      "content": "Add-on Lapaq: Keranjang Ditinggalkan (kode: abandoned_cart)\nCara & Lokasi Konfigurasi: Klik tombol Kelola pada detail Add-on (membuka tab Konfigurasi) untuk mengaktifkan Status pengingat email otomatis 3 hari, dan pantau daftarnya di menu Keranjang Ditinggalkan.\nPerilaku & Pembaruan Terbaru:\n- Pemeriksaan pembayaran sebelumnya lebih andal agar status kedaluwarsa dapat diperbarui dan pembelian berikutnya dapat dilanjutkan.\n- Pembayaran yang tertunda diperiksa otomatis secara berkala tanpa perlu membuka halaman pembayaran.\n- Pembelian mendukung Virtual Account sesuai metode pembayaran yang tersedia. Nomor pembayaran dapat disalin dan akses aktif setelah pembayaran terverifikasi.\n- Saat promo berlangsung, Kakak bisa memakai pengingat keranjang secara gratis untuk mengajak pembeli melanjutkan belanja. Aktifkan pengingat melalui Konfigurasi add-on.\n- Label biaya pada pembayaran add-on kini menjadi Biaya Payment Gateway. Nominal dan perhitungan biaya tetap sama.",
+      "structuredMeta": {
+        "addOnCode": "abandoned_cart",
+        "featureStatus": "ADDON"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:atur-pembayaran",
+      "title": "Peta Layar UI: atur pembayaran",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (atur-pembayaran)\nAlamat Halaman: lapaq.id/merchant/admin/config?tab=site\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Umum | Profil toko | Nama toko | Alamat toko | Pembayaran | Pembayaran online | QRIS | Virtual account | E-wallet | Gerai retail | Saldo dan penarikan | Pembayaran manual | BCA | Unggah foto QRIS | Rekening tujuan | Bank | Nomor rekening | Nama pemilik | Verifikasi email | ri***@kopilereng.id | Kode OTP | Aktif | Segera hadir\nAlur Interaksi di Layar:\nLangkah layar 1: Buka Pengaturan -> Pilih Pembayaran -> Online, Manual, Gateway sendiri\nLangkah layar 2: Sudah aktif sejak awal -> QRIS: konfirmasi otomatis -> Dana masuk ke Dompet\nLangkah layar 3: Tab Manual -> Nyalakan Pembayaran manual -> Butuh rekening atau QRIS\nLangkah layar 4: Tambah rekening tujuan -> BCA -> 1234567890 -> Rina Wulandari -> Simpan -> Rekening tujuan tersimpan\nLangkah layar 5: Unggah foto QRIS (opsional) -> has -> qris-kopi-lereng.png -> 184 KB -> JPG atau PNG, maks. 2 MB\nLangkah layar 6: Simpan perubahan -> Kode dikirim ke email admin\nLangkah layar 7: Verifikasi -> Pengaturan berhasil disimpan -> Online dan Manual aktif",
+      "structuredMeta": {
+        "demoSlug": "atur-pembayaran",
+        "pageUrl": "lapaq.id/merchant/admin/config?tab=site"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:atur-pengiriman",
+      "title": "Peta Layar UI: atur pengiriman",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (atur-pengiriman)\nAlamat Halaman: lapaq.id/merchant/admin/config?tab=site\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Umum | Profil toko | Nama toko | Alamat toko | Pengiriman | Alamat asal | Alamat lain | Metode pengiriman | Reguler | JNE | SiCepat | AnterAja | Wahana | RPX | ID Express | JDL | Lion Parcel | TIKI | J&amp;T | Ninja Xpress | SAP Express | POS Indonesia | Buffer ongkir | Instan\nAlur Interaksi di Layar:\nLangkah layar 1: Buka Pengaturan -> Pilih Pengiriman\nLangkah layar 2: Sama dengan alamat di Umum -> Ubah lewat Pengaturan Umum -> Atau gudang atau lokasi lain\nLangkah layar 3: Reguler menyala -> Matikan kurir yang tidak dipakai\nLangkah layar 4: 2.000 -> Ongkir Rp20.000 jadi Rp22.000. -> Ditambahkan ke ongkir pembeli\nLangkah layar 5: Nyalakan Instan -> GoSend -> GrabExpress\nLangkah layar 6: Pilih hari layanan -> Batas pesanan instan hari itu\nLangkah layar 7: Jl. Cihampelas No. 12, Bandung -> -6.89350, 107.60440 -> Geser pin ke titik jemput\nLangkah layar 8: Simpan perubahan -> Pengaturan berhasil disimpan",
+      "structuredMeta": {
+        "demoSlug": "atur-pengiriman",
+        "pageUrl": "lapaq.id/merchant/admin/config?tab=site"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:atur-seo-toko",
+      "title": "Peta Layar UI: atur seo toko",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (atur-seo-toko)\nAlamat Halaman: lapaq.id/merchant/admin/config?tab=site\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Umum | Identitas visual toko | Nama toko | Alamat toko | SEO | Hasil pencarian | Judul SEO | Deskripsi meta | Tampil di Google | Pratinjau | Kopi Lereng | Saat dibagikan\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Pengaturan -> Tab SEO -> Tampilan toko di hasil pencarian\nLangkah layar 2: Kopi Lereng: Kopi Arabika Bandung -> 33/60 -> Kopi Lereng: Kopi Arabika Bandung -> Kopi Lereng: Kopi Arabika Bandung -> Kopi Lereng: Kopi Arabika Bandung -> Maksimal 60 karakter\nLangkah layar 3: Biji kopi arabika dan robusta dari lereng Jawa Barat, disangrai tiap minggu. Kirim ke seluruh Indonesia. -> 104/160 -> Biji kopi arabika dan robusta dari lereng Jawa Barat, disangrai tiap minggu. Kirim ke seluruh Indonesia. -> Biji kopi arabika dan robusta dari lereng Jawa Barat, disangrai tiap minggu. Kirim ke seluruh Indonesia. -> Biji kopi arabika dan robusta dari lereng Jawa Barat, disangrai tiap minggu. Kirim ke seluruh Indonesia. -> Maksimal 160 karakter\nLangkah layar 4: Unggah -> Ganti -> kopi-lereng-1200x630.jpg -> 1200 x 630 px, maks. 5 MB\nLangkah layar 5: Hasil pencarian Google -> Saat dibagikan -> Mobile\nLangkah layar 6: Biarkan menyala -> Matikan hanya bila tak ingin muncul di Google\nLangkah layar 7: Simpan perubahan -> Pengaturan berhasil disimpan",
+      "structuredMeta": {
+        "demoSlug": "atur-seo-toko",
+        "pageUrl": "lapaq.id/merchant/admin/config?tab=site"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:atur-tampilan-toko",
+      "title": "Peta Layar UI: atur tampilan toko",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (atur-tampilan-toko)\nAlamat Halaman: lapaq.id/merchant/admin\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Statistik penjualan | Umum | Identitas visual toko | Nama toko | Alamat toko | Tampilan toko | Tema | Minimal | Segar | Warna | Warna utama | Latar | Teks | Tombol | Font | Font judul | Font isi | Pratinjau tampilan toko | Kopi Lereng | Produk | Rp89.000 | Rp72.000 | Rp78.000 | Rp65.000\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Pengaturan -> Tab Tampilan toko -> Warna dan font toko\nLangkah layar 2: Mati: pakai warna bawaan tema -> Aktifkan warna\nLangkah layar 3: Pilih Warna utama -> #0D9488 -> #0D9488 -> Atau Warna lain -> Atur Latar -> #FFF8F0 -> Latar, Teks, dan Tombol\nLangkah layar 4: Poppins -> Inter -> Font judul dan Font isi\nLangkah layar 5: Pratinjau toko -> Tampilan Desktop -> Mobile -> Tutup\nLangkah layar 6: Simpan perubahan -> Pengaturan berhasil disimpan",
+      "structuredMeta": {
+        "demoSlug": "atur-tampilan-toko",
+        "pageUrl": "lapaq.id/merchant/admin"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:atur-varian-produk",
+      "title": "Peta Layar UI: atur varian produk",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (atur-varian-produk)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=physical\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Fisik | Habis | Draft | Edit produk | Informasi dasar | Nama produk | Kategori | Deskripsi (opsional) | Foto produk | Pengaturan umum | Pre order | Harga, stok, dan berat | Harga jual | Harga diskon (opsional) | Stok | Berat | Varian 1 | Nama varian | Harga | SKU (opsional) | Varian 2 | Varian 3 | Publikasi | Aktif\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Produk Fisik -> Produk baru: Tambah produk -> Produk lama: Edit produk -> Form produk terbuka\nLangkah layar 2: Nyalakan Varian -> Varian -> Atur harga, berat, stok, dan SKU di tiap varian. -> Kartu Varian 1\nLangkah layar 3: 250g -> 85.000 -> 250 -> Harga diskon dan SKU opsional\nLangkah layar 4: Tambah varian -> 500g -> 160.000 -> 500 -> Nama varian tidak boleh kembar -> Maksimal 20 varian -> 1kg -> 310.000 -> 1000\nLangkah layar 5: Hapus di kartu varian -> Hapus -> Tinggal 2 varian\nLangkah layar 6: Simpan perubahan -> Harga tampil Mulai Rp -> Jumlah varian",
+      "structuredMeta": {
+        "demoSlug": "atur-varian-produk",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=physical"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:batalkan-pesanan",
+      "title": "Peta Layar UI: batalkan pesanan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (batalkan-pesanan)\nAlamat Halaman: lapaq.id/merchant/admin/orders\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Pesanan | 5B8R1T6W | Dimas Prakoso | Rp177.000 | 3H9N4C2L | Ayu Lestari | Rp64.000 | 9E2G7J5D | Fajar Nugroho | Rp72.000 | 7C1M9D4E | Sari Dewi | Rp85.000 | Dibayar | Belum Dibayar | Diproses | Dikirim | Rincian pesanan | 2 x Rp85.000 | Rp24.000 | -Rp17.000 | Pembeli dan pengiriman | dimas.prakoso@contoh.id | Status pesanan\nAlur Interaksi di Layar:\nLangkah layar 1: Transfer bank: bisa dibatalkan -> QRIS Milik Toko juga bisa -> QRIS Pembayaran Online QRIS Lapaq tidak bisa -> Sudah Dikirim: tidak bisa\nLangkah layar 2: Menu Pesanan -> Klik nomor pesanan -> Tombol ada di bawah status\nLangkah layar 3: Batalkan pesanan -> Yakin batalkan? -> armed -> Klik sekali lagi untuk yakin -> Dibatalkan -> mute -> dis\nLangkah layar 4: Status: Dibatalkan -> Stok produk dikembalikan -> Kupon dilepas hanya bila belum dibayar -> Pembeli menerima email\nLangkah layar 5: Sudah transfer? Kembalikan dananya -> Kabari pembeli -> Lanjutkan info pengembalian dana",
+      "structuredMeta": {
+        "demoSlug": "batalkan-pesanan",
+        "pageUrl": "lapaq.id/merchant/admin/orders"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:buat-kupon-diskon",
+      "title": "Peta Layar UI: buat kupon diskon",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (buat-kupon-diskon)\nAlamat Halaman: lapaq.id/merchant/admin/coupons\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Kupon Diskon | Gratis | Add-on gratis | Yang Kakak dapat | Informasi | 1.2.2 | Aktif | Kupon | Belum ada kupon di sini | KOPIPAGI | Buat kupon | Tipe kupon | Manual | Retensi | Kode kupon | Jenis diskon | Besar diskon | Maksimal diskon (opsional) | Minimal belanja (opsional) | Mulai | Berakhir | Kuota pemakaian (opsional) | Berlaku untuk | Hapus kupon?\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Kupon -> Add-on Kupon Diskon belum aktif -> Pasang -> Pasang: add-on langsung aktif -> Nonaktifkan -> pri -> out -> Kelola\nLangkah layar 2: Buat kupon -> Tipe kupon Manual -> Retensi: untuk disisipkan di paket\nLangkah layar 3: KOPIPAGI -> Huruf dan angka, 3-20 karakter\nLangkah layar 4: Jenis diskon -> Persen, Potongan nominal, Gratis ongkir -> 20.000 -> Batasi potongan persen\nLangkah layar 5: 100.000 -> Kosongkan untuk tanpa batas\nLangkah layar 6: Mulai: hari ini -> 31/10/2026 -> Produk fisik -> Khusus member\nLangkah layar 7: Pastikan Aktifkan kupon tercentang -> Simpan -> Bagikan kode KOPIPAGI\nLangkah layar 8: Sakelar Aktif: matikan kupon -> Nonaktif -> mute -> Hapus kupon -> Hapus kupon",
+      "structuredMeta": {
+        "demoSlug": "buat-kupon-diskon",
+        "pageUrl": "lapaq.id/merchant/admin/coupons"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:cari-dan-saring-pesanan",
+      "title": "Peta Layar UI: cari dan saring pesanan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (cari-dan-saring-pesanan)\nAlamat Halaman: lapaq.id/merchant/admin\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Pesanan terbaru | Pesanan | Oktober 2026 | 8F3K2A1Q | Budi Santoso | Rp109.000 | 5A9P2K7W | Andi Pratama | Rp230.000 | 9D2F4R6X | Budi Hartono | Rp72.000 | 2K7L5M9P | Dewi Anggraini | Rp145.000 | 3H6T8N2B | Maya Lestari | Rp157.000 | 6B4N1C8Z | Budi Kurniawan | Rp198.000 | Dibayar | Belum Dibayar | Siap Dikirim\nAlur Interaksi di Layar:\nLangkah layar 1: Pesanan Dibayar yang perlu diproses -> Buka menu Pesanan\nLangkah layar 2: Tab status, sampai Dibatalkan dan Kedaluwarsa -> Tab Dibayar -> Menampilkan 1–3 dari 3 pesanan\nLangkah layar 3: budi -> Nomor pesanan, pembeli, atau resi -> Hasil muncul otomatis\nLangkah layar 4: Tombol tanggal -> Atau pilih tanggal di kalender -> 7 hari terakhir -> 8 Okt – 14 Okt 2026 -> Rentang terpilih -> Terapkan -> 8 Okt 2026 – 14 Okt 2026 -> Menampilkan 1–2 dari 2 pesanan\nLangkah layar 5: QRIS -> JNE -> Menampilkan 1–1 dari 1 pesanan -> Total tertinggi -> Terbaru, Terlama, Total tertinggi\nLangkah layar 6: Atau ikon mata Lihat detail -> Klik nomor pesanan -> Detail pesanan",
+      "structuredMeta": {
+        "demoSlug": "cari-dan-saring-pesanan",
+        "pageUrl": "lapaq.id/merchant/admin"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:cek-dana-penjualan",
+      "title": "Peta Layar UI: cek dana penjualan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (cek-dana-penjualan)\nAlamat Halaman: lapaq.id/merchant/admin/wallet\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Dompet | Pembayaran online belum aktif | Belum ada penarikan | Rp490.000 | Pesanan 8f3a2c1d | +Rp109.000 | Pesanan 51c7e0b9 | +Rp247.750 | Penarikan saldo | -Rp500.000 | Berhasil\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Dompet -> Belum aktif? Klik ini dulu -> Setelah aktif, saldo tampil di sini\nLangkah layar 2: Pesanan QRIS yang sudah dibayar -> Pindah besok pukul 12.00 WIB\nLangkah layar 3: Sudah bisa ditarik -> Tarik ke rekening pencairan\nLangkah layar 4: Mutasi saldo -> Klik untuk membuka pesanannya\nLangkah layar 5: Uang masuk -> Uang masuk atau Uang keluar -> Download CSV\nLangkah layar 6: Saldo tersedia sudah cukup? -> Lanjut ke tutorial tarik saldo",
+      "structuredMeta": {
+        "demoSlug": "cek-dana-penjualan",
+        "pageUrl": "lapaq.id/merchant/admin/wallet"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:cetak-invoice-dan-label",
+      "title": "Peta Layar UI: cetak invoice dan label",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (cetak-invoice-dan-label)\nAlamat Halaman: lapaq.id/merchant/admin/orders\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Pesanan | 1 dipilih | 8F3K2A1Q | Budi Santoso | Rp109.000 | 9D2F4R6X | Joko Susilo | Rp72.000 | 2K7L5M9P | Dewi Anggraini | Rp145.000 | 5A9P2K7W | Andi Pratama | Rp230.000 | 7C1M9D4E | Sari Dewi | Rp85.000 | Diproses | Siap Dikirim | Belum Dibayar | Selesai | Rincian pesanan | Rp24.000 | Status pesanan\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Pesanan -> Klik nomor pesanan -> Label pengiriman, Invoice, Bukti bayar\nLangkah layar 2: Invoice -> Periksa isinya -> Cetak -> Pilih printer atau Simpan sebagai PDF -> Lalu Cetak atau Simpan\nLangkah layar 3: Label: tidak untuk Belum Dibayar -> Resi belum diisi? Pakai nomor pesanan -> Cetak -> Cetak label\nLangkah layar 4: Kembali ke daftar Pesanan -> Centang pesanan -> 2 dipilih -> 3 dipilih -> Cetak label -> Semua label di tab baru\nLangkah layar 5: Ctrl+P (Windows) atau Cmd+P (Mac) -> Cetak semua label",
+      "structuredMeta": {
+        "demoSlug": "cetak-invoice-dan-label",
+        "pageUrl": "lapaq.id/merchant/admin/orders"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:daftar-akun-seller",
+      "title": "Peta Layar UI: daftar akun seller",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (daftar-akun-seller)\nAlamat Halaman: lapaq.id/merchant-register\nElemen, Tombol & Petunjuk di Layar: Daftar sebagai Merchant | Nama Pemilik | Email Pemilik | Kata Sandi | Konfirmasi Kata Sandi | Verifikasi email | rina@kopilereng.id | Kode verifikasi | Lengkapi data toko Kakak | Jenis penjual | Kakak berjualan sebagai | Perorangan | Badan usaha | Nama lengkap sesuai KTP | NIK | Profil toko | Nama toko | Alamat toko | Kategori usaha | Nomor WhatsApp toko | Nama kontak | Provinsi | Kota atau kabupaten | Kecamatan | Alamat lengkap\nAlur Interaksi di Layar:\nLangkah layar 1: Akun pemilik dulu, data toko menyusul -> Bisa pakai akun Google -> Atau isi data pemilik\nLangkah layar 2: Rina Wulandari -> rina@kopilereng.id -> •••••••••• -> •••••••••• -> Daftar dan lanjutkan\nLangkah layar 3: Kode dikirim ke email, berlaku 10 menit -> Verifikasi dan lanjutkan\nLangkah layar 4: Pilih jenis penjual -> Rina Wulandari -> 3273014505900004 -> Lanjut -> Kopi Lereng -> kopi-lereng -> Memeriksa alamat toko… -> mute -> Alamat tersedia. -> Alamat toko tidak bisa diubah nanti\nLangkah layar 5: Makanan dan minuman -> 81234567890 -> Tanpa angka 0 di depan -> Lanjut -> Rina Wulandari -> Jawa Barat -> Kota Bandung -> Coblong -> Jl. Cihampelas No. 12 -> Lanjut\nLangkah layar 6: Periksa datanya -> Simpan -> Toko aktif, uji coba 14 hari",
+      "structuredMeta": {
+        "demoSlug": "daftar-akun-seller",
+        "pageUrl": "lapaq.id/merchant-register"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:ekspor-data-csv",
+      "title": "Peta Layar UI: ekspor data csv",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (ekspor-data-csv)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=physical\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Fisik | produk-fisik-Kopi-Lereng-2026-10-14.csv | Pesanan | 1 dipilih | 8F3K2A1Q | Budi Santoso | Rp109.000 | 5A9P2K7W | Andi Pratama | Rp230.000 | 9D2F4R6X | Joko Susilo | Rp72.000 | 2K7L5M9P | Dewi Anggraini | Rp145.000 | 7C1M9D4E | Sari Dewi | Rp85.000 | pesanan-Kopi-Lereng-2026-10-14.csv | Dibayar | Belum Dibayar | Diproses | Selesai\nAlur Interaksi di Layar:\nLangkah layar 1: Atur tab -> Kopi Biji -> Ekspor -> Berisi produk yang tampil, maks. 5.000\nLangkah layar 2: Pesanan -> Atur tab atau filter -> Ekspor -> Sebagian? Centang, maks. 50 -> Lalu Ekspor\nLangkah layar 3: Pelanggan -> Pernah belanja -> Ekspor -> File CSV pelanggan\nLangkah layar 4: Laporan -> Pilih laporannya -> Atur periode -> 30 hari terakhir -> Terapkan -> 15 Sep – 14 Okt 2026 -> Rp2.940.000 -> Ekspor CSV\nLangkah layar 5: Dompet -> Mutasi saldo -> Download CSV -> Mutasi saldo terunduh",
+      "structuredMeta": {
+        "demoSlug": "ekspor-data-csv",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=physical"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:ganti-password-akun",
+      "title": "Peta Layar UI: ganti password akun",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (ganti-password-akun)\nAlamat Halaman: lapaq.id/merchant/admin\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Rina Wulandari | Statistik penjualan | Umum | Identitas visual toko | Nama toko | Alamat toko | Akun | Profil | Nama lengkap | Email | Ganti password | Password saat ini | Password baru | Ulangi password baru | Hapus akun | Buat password\nAlur Interaksi di Layar:\nLangkah layar 1: Klik nama Kakak -> Pengaturan toko -> Tab Akun -> Profil dan password\nLangkah layar 2: Rina Wulandari Putri -> 3 sampai 60 karakter -> Simpan -> Profil diperbarui\nLangkah layar 3: •••••••• -> •••••••••• -> •••••••••• -> Min. 8 karakter, huruf dan angka\nLangkah layar 4: Ganti password -> Password diperbarui\nLangkah layar 5: Daftar dengan Google? Buat password -> •••••••••• -> •••••••••• -> Buat password -> Password diperbarui",
+      "structuredMeta": {
+        "demoSlug": "ganti-password-akun",
+        "pageUrl": "lapaq.id/merchant/admin"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:hapus-akun",
+      "title": "Peta Layar UI: hapus akun",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (hapus-akun)\nAlamat Halaman: lapaq.id/merchant/admin\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Rina Wulandari | Statistik penjualan | Umum | Identitas visual toko | Nama toko | Alamat toko | Akun | Profil | Nama lengkap | Email | Ganti password | Hapus akun | 31 Okt 2026 | Belum bisa menghapus akun | Hapus akun? | Ketik HAPUS untuk konfirmasi | Password\nAlur Interaksi di Layar:\nLangkah layar 1: Klik nama Kakak -> Pengaturan toko -> Tab Akun\nLangkah layar 2: Kartu Hapus akun -> Unduh data saya -> Simpan salinan data akun dan toko\nLangkah layar 3: Hapus akun -> Selesaikan dulu daftarnya -> Mengerti\nLangkah layar 4: Semua sudah beres? Klik lagi -> HAPUS -> •••••••• -> Akun Google: ketik email akun Kakak -> Hapus akun -> armed -> Penghapusan akun dijadwalkan\nLangkah layar 5: Dihapus 14 hari setelah konfirmasi -> Batalkan penghapusan -> Akun batal dihapus",
+      "structuredMeta": {
+        "demoSlug": "hapus-akun",
+        "pageUrl": "lapaq.id/merchant/admin"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:impor-produk",
+      "title": "Peta Layar UI: impor produk",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (impor-produk)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=physical\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Fisik | Yang Kakak dapat | Impor produk fisik dan digital | 500 kuota per paket | Sisa kuota tidak hangus | Informasi | 1.2.0 | Rp20.000 per 500 kuota | 0 produk | Tanpa batas | Beli kuota | Bayar dengan QRIS | Rp20.000 | 14:52 | Pembayaran diterima | Kuota habis | Kategori Produk | Kopi Biji | Alat Seduh | Impor produk fisik | Sumber produk | Pilih file CSV | produk-kopi-lereng.csv | Baris ini akan dilewati\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Produk Fisik -> Impor -> Belum aktif: ke halaman add-on\nLangkah layar 2: Beli kuota -> 1 kuota untuk 1 produk -> Beli kuota -> Scan QRIS, bayar sesuai harga -> Cek status -> Sisa kuota tetap tersimpan\nLangkah layar 3: Produk > Kategori Produk -> Buat kategori produknya dulu -> Nama harus sama dengan kolom kategori di file\nLangkah layar 4: Produk Fisik -> Impor -> Sumber produk -> Ekspor dari Shopee -> atau TikTok Shop -> CSV produk fisik\nLangkah layar 5: Unduh template CSV -> Kolom nama wajib -> kategori wajib -> harga wajib -> Satu baris = satu produk\nLangkah layar 6: Pilih file CSV atau tarik ke sini -> Maks. 8 MB, CSV 2.000 baris\nLangkah layar 7: Siap diimpor dan bermasalah -> Baris ini tidak ikut diimpor\nLangkah layar 8: Impor 22 produk -> Impor produk berhasil -> Selesai -> Dari Shopee/TikTok Shop: Draft, aktifkan dulu",
+      "structuredMeta": {
+        "demoSlug": "impor-produk",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=physical"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:kelola-kategori-produk",
+      "title": "Peta Layar UI: kelola kategori produk",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (kelola-kategori-produk)\nAlamat Halaman: lapaq.id/merchant/admin/collections\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Kategori Produk | Kopi Biji | Alat Seduh | Minuman | Promo Lebaran | Paket Hadiah | Tambah kategori | Nama kategori | Alamat URL | Berlaku untuk | Edit kategori | Hapus kategori?\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Kategori Produk -> Semua kategori toko\nLangkah layar 2: Tambah kategori -> Paket Hadiah -> paket-hadiah -> Maksimal 40 karakter -> Fisik dan digital -> Simpan\nLangkah layar 3: Tampil di toko -> Tampil -> Matikan untuk menyembunyikan -> Disembunyikan\nLangkah layar 4: Ikon pensil -> Kopi Biji Pilihan -> kopi-biji-pilihan -> Berlaku untuk juga bisa diubah -> Simpan -> Kopi Biji Pilihan -> /kategori/kopi-biji-pilihan\nLangkah layar 5: Masih berisi produk: tidak bisa dihapus -> Ikon tempat sampah -> Hapus kategori",
+      "structuredMeta": {
+        "demoSlug": "kelola-kategori-produk",
+        "pageUrl": "lapaq.id/merchant/admin/collections"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:kelola-pelanggan",
+      "title": "Peta Layar UI: kelola pelanggan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (kelola-pelanggan)\nAlamat Halaman: lapaq.id/merchant/admin/members\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Pelanggan | Fajar Nugroho | Rp0 | Ayu Lestari | Rp170.000 | Dimas Prakoso | Rp742.000 | Sari Dewi | Rp255.000 | Budi Santoso | Rp436.000 | pelanggan-Kopi-Lereng-2026-10-14.csv | Member | Tamu | Rp123.667 | 12 Okt 2026 | 4K7P2M9X | 8F3K2A1Q | Kontak | 0812 3456 7890 | dimas.prakoso@contoh.id | Sleman, DIY | Catatan pelanggan | Diproses\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Pelanggan -> Member: mendaftar di toko Kakak -> Tamu: belanja tanpa akun\nLangkah layar 2: Dimas -> Pernah belanja -> Belanja tertinggi -> Pelanggan terbaik di atas\nLangkah layar 3: Lihat detail -> Total belanja dan rata-rata -> Riwayat pesanan\nLangkah layar 4: Suka kopi light roast, kirim ke kantor -> Simpan catatan -> Hanya terlihat oleh tim toko\nLangkah layar 5: Hubungi via WhatsApp -> Sapaan sudah terisi\nLangkah layar 6: Kembali ke pelanggan -> Ekspor ke CSV -> Daftar pelanggan terunduh",
+      "structuredMeta": {
+        "demoSlug": "kelola-pelanggan",
+        "pageUrl": "lapaq.id/merchant/admin/members"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:kelola-ulasan",
+      "title": "Peta Layar UI: kelola ulasan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (kelola-ulasan)\nAlamat Halaman: lapaq.id/merchant/admin/reviews\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Ulasan dan rating | Gratis | Add-on gratis | Yang Kakak dapat | Aktif | Rincian pesanan | 2 x Rp85.000 | Rp24.000 | Rp194.000 | Pembeli dan pengiriman | Dimas Prakoso | dimas.prakoso@contoh.id | Status pesanan | Selesai | 4,6 | Sari Dewi | Ayu Lestari | Tamu | Disembunyikan | Member\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Ulasan dan rating -> Pasang (gratis) atau Beli (berbayar) -> Pasang -> Nonaktifkan -> pri -> out -> Add-on aktif\nLangkah layar 2: Selesai: email ulasan terkirim otomatis -> Kirim ulang: Kirim permintaan ulasan\nLangkah layar 3: Ulasan dan rating -> Rata-rata rating dan jumlah ulasan -> Klik baris bintang untuk menyaring -> Rating 2 -> Atau cari nama, produk, isi ulasan\nLangkah layar 4: Sembunyikan -> Tampilkan di toko -> Tidak tampil di toko\nLangkah layar 5: Tampilkan di toko -> Sembunyikan -> Ulasan tampil lagi di toko",
+      "structuredMeta": {
+        "demoSlug": "kelola-ulasan",
+        "pageUrl": "lapaq.id/merchant/admin/reviews"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:keranjang-ditinggalkan",
+      "title": "Peta Layar UI: keranjang ditinggalkan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (keranjang-ditinggalkan)\nAlamat Halaman: lapaq.id/merchant/admin/add-ons\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Add-on | Tersedia | Keranjang Ditinggalkan | Produk Unggulan | Analitik Toko | Rp10.000/bulan | Gratis | Rp20.000 sekali bayar | Yang Kakak dapat | Pengingat Email | Status pengingat | Waktu pengiriman | Frekuensi | Beli Keranjang Ditinggalkan | Pembayaran diterima | Rp10.000 | Aktif | Daftar Keranjang | Keranjang member | Fajar Nugroho | Robusta Temanggung 200g | 1 hari | Dimas Prakoso | Arabika Gayo 250g\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Add-on -> Pasang Keranjang Ditinggalkan -> Add-on berbayar: Beli -> Beli, lalu bayar QRIS -> Selesai -> Nonaktifkan -> pri -> out -> Add-on aktif\nLangkah layar 2: Kelola -> Kartu Pengingat Email -> Aktif -> Simpan Pengaturan\nLangkah layar 3: Lihat Riwayat Lengkap -> Keranjang dan pesanan belum dibayar\nLangkah layar 4: Filter Keranjang -> Keranjang member -> 3 hari atau lebih -> Tampilkan Hasil\nLangkah layar 5: Lihat Detail -> Isi keranjang -> Tindak lanjut: Siap diingatkan",
+      "structuredMeta": {
+        "demoSlug": "keranjang-ditinggalkan",
+        "pageUrl": "lapaq.id/merchant/admin/add-ons"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:konfirmasi-transfer-manual",
+      "title": "Peta Layar UI: konfirmasi transfer manual",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (konfirmasi-transfer-manual)\nAlamat Halaman: lapaq.id/merchant/admin/orders\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Pesanan | 8F3K2A1Q | Budi Santoso | Rp109.000 | 2D7H5K9P | Sari Dewi | Rp64.000 | 7C1M9D4E | Rudi Hartono | Rp85.000 | Belum Dibayar | Dibayar | Rincian pesanan | Rp24.000 | Pembeli dan pengiriman | JNE REG | Status pesanan | Bukti bayar 8F3K2A1Q | 14 Okt 2026, 10.20 | BCA | Rp45.000 | Rp19.000 | SICEPAT REG | Bukti bayar 2D7H5K9P\nAlur Interaksi di Layar:\nLangkah layar 1: Tab Belum Dibayar -> Transfer bank perlu dicek manual -> QRIS statis: QRIS Milik Toko\nLangkah layar 2: Buka detail pesanan -> Pembeli sudah unggah bukti\nLangkah layar 3: Cek bukti transfer -> Cocokkan dengan mutasi rekening -> Lihat ukuran penuh\nLangkah layar 4: Dana sudah masuk -> Dibayar -> warn -> info -> Lunas -> paid -> now -> done -> dis -> Kabari pembeli via WhatsApp -> Lanjut proses pesanan\nLangkah layar 5: Pesanan lain, QRIS Milik Toko -> Nominal tidak sesuai? -> Tolak bukti -> dis -> Tetap Belum Dibayar\nLangkah layar 6: Kabari pembeli -> Pesan pengingat terisi otomatis\nLangkah layar 7: Pembeli tidak jadi bayar -> Yakin batalkan? -> armed -> Klik sekali lagi untuk yakin -> Dibatalkan -> warn -> mute -> Tidak dibayar -> void -> now -> now -> done -> Kabari pembeli via WhatsApp -> Pembeli menerima email pembatalan",
+      "structuredMeta": {
+        "demoSlug": "konfirmasi-transfer-manual",
+        "pageUrl": "lapaq.id/merchant/admin/orders"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:kupon-retensi",
+      "title": "Peta Layar UI: kupon retensi",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (kupon-retensi)\nAlamat Halaman: lapaq.id/merchant/admin/coupons\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Kupon | TERIMAKASIH | KOPIPAGI | 12 | Buat kupon | Tipe kupon | Manual | Retensi | Kode kupon | Jenis diskon | Besar diskon | Minimal belanja (opsional) | Mulai | Berakhir | Berlaku untuk | Khusus email pembeli | Aktif | Rincian pesanan | Rp85.000 | Rp24.000 | Rp109.000 | Pembeli dan pengiriman | Dimas Prakoso | dimas.prakoso@contoh.id\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Kupon -> Buat kupon -> Tipe kupon Retensi -> Awalan kode -> Kode dibuat otomatis per pesanan, misalnya TERIMAKASIH-7KQ2. -> TERIMAKASIH -> Potongan nominal -> Besar potongan -> 15.000 -> 100.000 -> 31/12/2026 -> Simpan -> Template retensi siap\nLangkah layar 2: Buka pesanan yang sudah dibayar -> Status Diproses -> Kartu Kupon retensi\nLangkah layar 3: Tambah kupon -> Pilih template -> Tambah kupon -> Kode dibuat otomatis\nLangkah layar 4: Cetak kartu -> Kartu untuk diselipkan di paket -> Cetak\nLangkah layar 5: Pembeli sedang checkout -> Sudah dipakai -> mute -> Sudah dipakai di pesanan baru -> Kedaluwarsa -> warn -> Atau Kedaluwarsa bila lewat batas",
+      "structuredMeta": {
+        "demoSlug": "kupon-retensi",
+        "pageUrl": "lapaq.id/merchant/admin/coupons"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:lengkapi-data-toko",
+      "title": "Peta Layar UI: lengkapi data toko",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (lengkapi-data-toko)\nAlamat Halaman: lapaq.id/merchant/admin/onboarding\nElemen, Tombol & Petunjuk di Layar: Lengkapi data toko Kakak | Jenis penjual | Kakak berjualan sebagai | Perorangan | Badan usaha | Nama lengkap sesuai KTP | NIK | Saya punya NPWP | Profil toko | Nama toko | Alamat toko | Logo toko (opsional) | Kategori usaha | Deskripsi singkat (opsional) | Nomor WhatsApp toko | Nama kontak | Provinsi | Kota atau kabupaten | Kecamatan | Kelurahan atau desa | Kode pos | Alamat lengkap | Tinjau | Penjual | Toko\nAlur Interaksi di Layar:\nLangkah layar 1: Empat langkah singkat -> Menu terbuka setelah selesai\nLangkah layar 2: Berjualan atas nama pribadi -> Rina Wulandari -> 3273014505900004 -> NPWP opsional\nLangkah layar 3: Kopi Lereng -> kopi-lereng -> Memeriksa alamat toko… -> mute -> Alamat tersedia. -> Alamat toko tidak bisa diubah nanti -> Logo boleh menyusul -> has -> Ganti logo -> Makanan dan minuman -> 81234567890 -> Tanpa angka 0 di depan\nLangkah layar 4: Rina Wulandari -> Jawa Barat -> Kota Bandung -> Coblong -> Cipaganti -> 40131 -> Kode pos terisi otomatis -> Jl. Cihampelas No. 12, dekat Masjid Al-Ikhlas\nLangkah layar 5: Klik Ubah kalau ada yang salah\nLangkah layar 6: Simpan -> Semua menu sudah terbuka",
+      "structuredMeta": {
+        "demoSlug": "lengkapi-data-toko",
+        "pageUrl": "lapaq.id/merchant/admin/onboarding"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:lihat-laporan-penjualan",
+      "title": "Peta Layar UI: lihat laporan penjualan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (lihat-laporan-penjualan)\nAlamat Halaman: lapaq.id/merchant/admin/reports\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Laporan | Penjualan | Pesanan | Waktu tersibuk | Produk | Produk terlaris | Penjualan per kategori | Stok produk | Unduhan produk digital | Pelanggan | Pelanggan baru dan berulang | Penjualan per kota | Cohort pelanggan | Pembayaran dan pengiriman | Metode pembayaran | Kurir dan ongkir | Pemasaran | Kupon | Keuangan | Ringkasan keuangan | Segera hadir | Otomatis | Rp9.846.000 | 104\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Laporan -> Dikelompokkan per topik -> Pemasaran -> Keuangan\nLangkah layar 2: Ringkasan keuangan -> Produk terlaris -> Stok produk -> Buka laporan Penjualan\nLangkah layar 3: Bawaan: 30 hari terakhir -> Bulan lalu -> 1 Sep - 30 Sep 2026 -> Atau rentang sendiri -> 1 Okt - 14 Okt 2026 -> Terapkan -> 1 Okt - 14 Okt 2026 -> Rp5.160.000 -> Rp97.358\nLangkah layar 4: Total penjualan -> Rata-rata nilai pesanan -> Grafik per hari -> Rincian per periode\nLangkah layar 5: Ekspor CSV -> File CSV terunduh\nLangkah layar 6: Semua laporan -> Pilih laporan lain",
+      "structuredMeta": {
+        "demoSlug": "lihat-laporan-penjualan",
+        "pageUrl": "lapaq.id/merchant/admin/reports"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:lupa-kata-sandi",
+      "title": "Peta Layar UI: lupa kata sandi",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (lupa-kata-sandi)\nAlamat Halaman: lapaq.id/admin/login\nElemen, Tombol & Petunjuk di Layar: Email | Kata Sandi | Reset kata sandi admin Kopi Lereng | Buat kata sandi baru | Kopi Lereng | Kata Sandi Baru | Konfirmasi Kata Sandi | Masa percobaan | Statistik penjualan\nAlur Interaksi di Layar:\nLangkah layar 1: rina@kopilereng.id -> •••••••• -> Masuk -> Cek ejaan email dan kata sandi\nLangkah layar 2: Daftar pakai Google? Masuk di sini\nLangkah layar 3: Lupa password? -> rina@kopilereng.id -> Kirim Link Reset -> Cek kotak masuk email\nLangkah layar 4: Cek juga folder Spam -> Berlaku 1 jam\nLangkah layar 5: •••• -> bad -> Minimal 8 karakter, huruf dan angka -> bad -> •••••••••• -> •••••••••• -> Simpan Kata Sandi\nLangkah layar 6: rina@kopilereng.id -> •••••••••• -> Masuk dengan kata sandi baru -> Berhasil masuk\nLangkah layar 7: Email dipakai beberapa toko? -> Reset dari tautan login toko\nLangkah layar 8: rina@kopilereng.id -> •••••••• -> Terlalu sering mencoba -> Tunggu sekitar 15 menit",
+      "structuredMeta": {
+        "demoSlug": "lupa-kata-sandi",
+        "pageUrl": "lapaq.id/admin/login"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:migrasi-produk-shopee",
+      "title": "Peta Layar UI: migrasi produk shopee",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (migrasi-produk-shopee)\nAlamat Halaman: Lapaq Migrator\nElemen, Tombol & Petunjuk di Layar: Lapaq | Pindahkan produk ke Lapaq | MIGRATOR | Dari mana produk Kakak sekarang? | Shopee | OrderHero | Scalev | WooCommerce | Shopify | Mayar | Berdu | Tersedia | Segera hadir | Cek koneksi | Shopee Seller Center | ✓ Shopee Seller Center (seller_demo@shopee.id) | ✓ Toko Kelontong Murah — toko-kelontong-murah.lapaq.id | Produk Saya | Live | Pindai produk | Toko Kelontong Murah | 200 | ● Addon Aktif | Ditemukan 2 produk dari Shopee Seller Center. | Addon Impor Produk Lapaq:\nAlur Interaksi di Layar:\nLangkah layar 1: Sandi tidak dibaca -> Setuju dan lanjut\nLangkah layar 2: Shopee tersedia, lainnya segera -> dis\nLangkah layar 3: Lanjut\nLangkah layar 4: Cek tab Shopee yang aktif\nLangkah layar 5: Login, 2 produk live -> Kembali ke Lapaq Migrator\nLangkah layar 6: Dua sisi terhubung -> Lanjut\nLangkah layar 7: Sisa kuota 200 produk -> Mulai Pindai\nLangkah layar 8: 2 produk siap diimpor -> Impor 2 produk\nLangkah layar 9: 2 produk berhasil dipindah -> Tinjau di Lapaq\nLangkah layar 10: Masuk sebagai Draft",
+      "structuredMeta": {
+        "demoSlug": "migrasi-produk-shopee",
+        "pageUrl": "Lapaq Migrator"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:migrasi-shopee",
+      "title": "Peta Layar UI: migrasi shopee",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (migrasi-shopee)\nAlamat Halaman: chromewebstore.google.com/detail/lapaq-migrator\nElemen, Tombol & Petunjuk di Layar: Tambahkan \"Lapaq Migrator\"? | Lapaq Migrator | Shopee Seller Centre | Tokopedia | ● Tersedia & Siap | Segera | Tab Shopee Seller Centre Terbuka | Tab Toko Lapaq Tujuan Terbuka | ● Tab Aktif | Toko Kelontong Murah | Addon Impor Produk Lapaq | 350 gram | Lengkapi dulu | ✓ Siap diimpor | Draft | Kemeja Oversize Linen Pria Casual | Celana Chino Slim Fit Stretch Premium\nAlur Interaksi di Layar:\nLangkah layar 1: + Tambahkan ke Chrome\nLangkah layar 2: Tambahkan ekstensi\nLangkah layar 3: Buka menu ekstensi Chrome -> Klik Pin untuk menyematkan ke toolbar\nLangkah layar 4: Buka Lapaq Migrator -> Pilih Shopee Seller Centre\nLangkah layar 5: Setuju dan lanjut\nLangkah layar 6: Pilih Shopee Seller Centre -> Klik Lanjut\nLangkah layar 7: Tab Shopee dan Lapaq aktif di browser. Klik Lanjut\nLangkah layar 8: Mulai Pindai Katalog Sekarang\nLangkah layar 9: Lengkapi berat produk -> 250 -> Simpan berat -> ✓ Siap diimpor -> warn -> 2 Produk -> 0 Produk -> Impor 2 produk ke Toko Kelontong Murah\nLangkah layar 10: Tinjau di Lapaq -> Produk masuk sebagai Draft untuk diperiksa",
+      "structuredMeta": {
+        "demoSlug": "migrasi-shopee",
+        "pageUrl": "chromewebstore.google.com/detail/lapaq-migrator"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:nonaktifkan-hapus-produk",
+      "title": "Peta Layar UI: nonaktifkan hapus produk",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (nonaktifkan-hapus-produk)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=physical\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Fisik | Draft | Edit produk | Informasi dasar | Nama produk | Kategori | Deskripsi (opsional) | Foto produk | Harga, stok, dan berat | Harga jual | Stok | Publikasi | Aktif | Nonaktif | Hapus produk?\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Produk Fisik -> Kolom Status\nLangkah layar 2: Klik sakelar -> Nonaktif -> Nonaktif: disembunyikan dari toko\nLangkah layar 3: Draft tidak punya sakelar -> Edit produk -> Pilih Aktif di Publikasi -> Simpan perubahan -> Sekarang Aktif\nLangkah layar 4: Hapus produk -> Tidak dapat dibatalkan -> Hapus produk -> Sudah pernah dipesan? Nonaktifkan saja",
+      "structuredMeta": {
+        "demoSlug": "nonaktifkan-hapus-produk",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=physical"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:pasang-add-on",
+      "title": "Peta Layar UI: pasang add on",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (pasang-add-on)\nAlamat Halaman: lapaq.id/merchant/admin/add-ons\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Add-on | Terpasang | Kupon Diskon | Tersedia | Produk Unggulan | Keranjang Ditinggalkan | Analitik Toko | Hapus Branding Footer | Impor Produk | Gratis | ● Aktif | Rp10.000/bulan | Rp20.000 sekali bayar | Rp10.000 sekali bayar | Rp15.000 per 100 kuota | Yang Kakak dapat | Langkah singkat | 1.2.1 | Informasi | 9 Okt 2026 | Nonaktifkan Produk Unggulan? | Aktif | Terbaru | 1.2.3\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Add-on -> Filter Gratis -> Kembali ke Semua -> unggulan\nLangkah layar 2: Klik add-on -> Tutorial -> Pembaruan\nLangkah layar 3: Gratis: klik Pasang -> Nonaktifkan -> pri -> out -> Langsung aktif\nLangkah layar 4: Berbayar: klik Beli -> Cek Biaya -> Beli\nLangkah layar 5: Scan QRIS -> Berlaku 14:41 -> Sebelum waktu Berlaku habis -> Cek status -> Pembayaran diterima -> Selesai -> Selesai -> Nonaktifkan -> pri -> out\nLangkah layar 6: Kelola -> Pengaturan add-on\nLangkah layar 7: Nonaktifkan -> Data dan pengaturan tetap tersimpan -> Aktifkan -> out -> pri -> Bisa diaktifkan lagi",
+      "structuredMeta": {
+        "demoSlug": "pasang-add-on",
+        "pageUrl": "lapaq.id/merchant/admin/add-ons"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:pasang-ekstensi-chrome",
+      "title": "Peta Layar UI: pasang ekstensi chrome",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (pasang-ekstensi-chrome)\nAlamat Halaman: chromewebstore.google.com/detail/lapaq-migrator\nElemen, Tombol & Petunjuk di Layar: lapaq-migrator | Lapaq Migrator | Ringkasan Fitur | Tambahkan \"Lapaq Migrator\"? | Ekstensi ini dapat: | Lapaq Migrator telah ditambahkan ke Chrome | Ekstensi | Lapaq | Migrator | Dari mana produk Kakak sekarang? | Shopee | OrderHero | Scalev | WooCommerce | Shopify | Mayar | Tersedia | Segera hadir\nAlur Interaksi di Layar:\nLangkah layar 1: Buka halaman Lapaq Migrator -> + Tambahkan ke Chrome -> pri -> dis -> Memeriksa...\nLangkah layar 2: Izinkan akses ke katalog -> Tambahkan ekstensi -> dis -> out -> Hapus dari Chrome\nLangkah layar 3: Ikon puzzle = menu ekstensi\nLangkah layar 4: Sematkan agar selalu terlihat\nLangkah layar 5: Ikon Lapaq sudah di toolbar\nLangkah layar 6: Pilih Shopee, lainnya segera hadir",
+      "structuredMeta": {
+        "demoSlug": "pasang-ekstensi-chrome",
+        "pageUrl": "chromewebstore.google.com/detail/lapaq-migrator"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:penarikan-gagal",
+      "title": "Peta Layar UI: penarikan gagal",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (penarikan-gagal)\nAlamat Halaman: lapaq.id/merchant/admin/wallet\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Dompet | Rp1.240.000 | Rp490.000 | Pengembalian penarikan | +Rp1.250.000 | Penarikan saldo | -Rp1.250.000 | Rekening pencairan | Bank | Nomor rekening | Nama pemilik | Verifikasi email | ri***@kopilereng.id | BCA •••• 7890 | Kode OTP | Diproses | Berhasil\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Dompet -> Tab Penarikan -> Kolom Status\nLangkah layar 2: Diproses maksimal 1x24 jam kerja -> Belum bisa ajukan penarikan baru\nLangkah layar 3: Dana sudah dikirim -> Cek mutasi bank sesuai Diterima\nLangkah layar 4: Gagal -> warn -> err -> Rp1.250.000 -> dis -> Alasannya tampil di bawah status -> Mutasi saldo -> Saldo dikembalikan\nLangkah layar 5: Ubah rekening pencairan -> BCA -> 1234567890 -> Rina W -> Rina Wulandari -> Sesuai buku tabungan -> Lanjut -> Kode dari email admin toko -> Verifikasi -> a.n. Rina Wulandari -> Rekening diperbarui -> Ajukan Tarik saldo lagi -> Rp0 -> dis -> Penarikan baru diproses\nLangkah layar 6: Tarik saldo tidak aktif? -> Rekening pencairan sudah diisi? -> Masih ada yang Diproses?",
+      "structuredMeta": {
+        "demoSlug": "penarikan-gagal",
+        "pageUrl": "lapaq.id/merchant/admin/wallet"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:perpanjang-langganan",
+      "title": "Peta Layar UI: perpanjang langganan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (perpanjang-langganan)\nAlamat Halaman: lapaq.id/merchant/admin\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Rina Wulandari | Statistik penjualan | Billing | Pilih paket | 1 Bulan | 3 Bulan | 6 Bulan | 1 Tahun | Riwayat langganan | Paket 6 Bulan | Rp280.000 | Rp46.667 | 26 Apr 2027 | Bayar dengan QRIS | Pembayaran diterima | Percobaan | Paling dipilih\nAlur Interaksi di Layar:\nLangkah layar 1: Klik kartu paket -> Atau klik nama Kakak -> Billing\nLangkah layar 2: Paket Kakak sekarang -> Tanggal berakhir dan sisa hari\nLangkah layar 3: 1, 3, 6 Bulan, atau 1 Tahun -> Pilih paket\nLangkah layar 4: Harga, Per bulan, Berlaku sampai -> Bayar Rp280.000\nLangkah layar 5: Scan dengan aplikasi bank atau e-wallet -> Bayar sebelum waktu habis -> Berlaku 14:21 -> Periksa status\nLangkah layar 6: Pembayaran diterima -> Selesai -> Paket 6 Bulan -> Sampai 26 Apr 2027 (191 hari lagi). -> Aktif -> info -> Perpanjang -> Tercatat di Riwayat langganan",
+      "structuredMeta": {
+        "demoSlug": "perpanjang-langganan",
+        "pageUrl": "lapaq.id/merchant/admin"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:produk-pre-order",
+      "title": "Peta Layar UI: produk pre order",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (produk-pre-order)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=physical\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Fisik | Tambah produk fisik | Informasi dasar | Nama produk | Kategori | Deskripsi (opsional) | Foto produk | Pengaturan umum | Pre order | Mulai pre order | Berakhir | Estimasi kirim setelah PO berakhir (opsional) | Harga, stok, dan berat | Harga jual | Harga diskon (opsional) | Stok | Berat | Publikasi | Aktif | Nonaktif | Draft\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Produk Fisik -> Produk lama: Edit produk -> Tambah produk -> Gayo Natal Blend 250g -> Kopi Biji\nLangkah layar 2: Nyalakan Pre order -> Harga dan berat -> Kuota pre order (opsional) -> Saat aktif, stok tidak dipakai\nLangkah layar 3: 20/10/2026 -> 03/11/2026 -> Harus setelah tanggal mulai -> Opsional, dalam hari\nLangkah layar 4: 95.000 -> 250 -> Kosongkan bila tanpa batas -> Bervarian: isi Kuota di tiap varian\nLangkah layar 5: Simpan produk -> Label PO mulai -> Kuota PO",
+      "structuredMeta": {
+        "demoSlug": "produk-pre-order",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=physical"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:produk-unggulan",
+      "title": "Peta Layar UI: produk unggulan",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (produk-unggulan)\nAlamat Halaman: lapaq.id/merchant/admin/add-ons\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Add-on | Tersedia | Produk Unggulan | Keranjang Ditinggalkan | Analitik Toko | Gratis | Rp10.000/bulan | Rp20.000 sekali bayar | Yang Kakak dapat | Aktif | Produk Fisik | Arabika Gayo 250g | Robusta Temanggung 200g | Kopi Susu Botol 1L | Atur produk unggulan | E-book Panduan Seduh Manual | ★ Unggulan\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Add-on -> Produk Unggulan -> Pasang -> Nonaktifkan -> pri -> out -> Add-on aktif\nLangkah layar 2: Produk > Produk Fisik -> Klik bintang pada produk Aktif -> Produk masuk daftar unggulan\nLangkah layar 3: Naikkan urutan -> Naik lagi ke nomor 1 -> X: keluarkan dari daftar -> 2/5 slot produk unggulan digunakan.\nLangkah layar 4: Simpan perubahan -> Label Unggulan",
+      "structuredMeta": {
+        "demoSlug": "produk-unggulan",
+        "pageUrl": "lapaq.id/merchant/admin/add-ons"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:proses-pesanan-pertama",
+      "title": "Peta Layar UI: proses pesanan pertama",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (proses-pesanan-pertama)\nAlamat Halaman: lapaq.id/merchant/admin\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Pesanan terbaru | 8F3K2A1Q | Dibayar | Pesanan | Budi Santoso | Rp109.000 | 7C1M9D4E | Sari Dewi | Rp85.000 | Selesai | Rincian pesanan | 1 x Rp85.000 | Rp24.000 | Pembeli dan pengiriman | Jl. Kaliurang Km 5 No. 8, Sleman | JNE REG | CGK0123456789 | Status pesanan | Nomor resi | Label pengiriman | Kopi Lereng | JNE\nAlur Interaksi di Layar:\nLangkah layar 1: Ada pesanan baru -> Perlu diproses -> Buka Pesanan -> Tab Dibayar\nLangkah layar 2: Buka detail pesanan -> Cek produk dan jumlah -> Cek alamat dan kurir\nLangkah layar 3: Proses pesanan -> info -> Diproses -> Siap dikirim -> Tandai siap dikirim\nLangkah layar 4: Label pengiriman -> Cetak, lalu tempel di paket -> Tandai siap dikirim -> Siap Dikirim -> Dikirim -> Kirim pesanan\nLangkah layar 5: CGK0123456789 -> Kirim pesanan -> Dikirim -> Selesai -> Tandai selesai\nLangkah layar 6: Setelah paket diterima -> info -> Selesai -> Kirim ulang bila email ulasan belum terkirim",
+      "structuredMeta": {
+        "demoSlug": "proses-pesanan-pertama",
+        "pageUrl": "lapaq.id/merchant/admin"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:tambah-produk-digital",
+      "title": "Peta Layar UI: tambah produk digital",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (tambah-produk-digital)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=digital\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Digital | Buat kategori terlebih dahulu | Tambah kategori | Nama kategori | Alamat URL | Berlaku untuk | Informasi dasar | Nama produk | Kategori | SKU (opsional) | Deskripsi (opsional) | Alamat produk di toko | Foto produk | Harga dan file | Harga jual | Harga diskon (opsional) | URL download | Varian 1 | Nama varian | Harga | Varian 2 | Keterangan format (opsional) | Publikasi | Aktif\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Produk Digital -> Buat kategori digital dulu\nLangkah layar 2: E-book -> e-book -> Produk digital atau Fisik dan digital -> dis -> Belum ada produk di sini. Produk dengan status ini akan muncul di sini.\nLangkah layar 3: Tambah produk -> Panduan Seduh Manual -> panduan-seduh-manual -> E-book -> E-book 48 halaman: resep V60, tubruk, dan french press. -> Foto sampul -> has\nLangkah layar 4: 49.000 -> https://drive.google.com/file/d/1aB2c3… -> Wajib diawali https:// -> PDF, 48 halaman\nLangkah layar 5: Beberapa paket? Nyalakan Varian -> Varian -> Atur harga dan URL download di tiap varian. -> Basic -> 49.000 -> https://drive.google.com/file/d/basic… -> Satu file per varian -> Maksimal 20 varian -> Lengkap\nLangkah layar 6: Aktif: tampil dan bisa dibeli -> Belum siap? Simpan sebagai draft -> Simpan produk -> Produk digital sudah tampil\nLangkah layar 7: Setelah pembayaran lunas -> Lihat Akses Digital -> Pembeli klik untuk mengunduh",
+      "structuredMeta": {
+        "demoSlug": "tambah-produk-digital",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=digital"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:tambah-produk-pertama",
+      "title": "Peta Layar UI: tambah produk pertama",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (tambah-produk-pertama)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=physical\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Fisik | Buat kategori terlebih dahulu | Tambah kategori | Nama kategori | Alamat URL | Berlaku untuk | Informasi dasar | Nama produk | Kategori | SKU (opsional) | Deskripsi (opsional) | Alamat produk di toko | Foto produk | Pengaturan umum | Harga, stok, dan berat | Harga jual | Harga diskon (opsional) | Stok | Berat | Publikasi | Aktif | Nonaktif | Draft | Rasio persegi 1:1, disarankan 800 x 800 px atau lebih\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Produk Fisik -> Wajib ada kategori dulu\nLangkah layar 2: Kopi Biji -> kopi-biji -> Produk fisik sudah terpilih -> dis -> Belum ada produk di sini. Produk dengan status ini akan muncul di sini.\nLangkah layar 3: Tambah produk -> Arabika Gayo 250g -> arabika-gayo-250g -> Kopi Biji -> Biji kopi arabika Gayo, roasting medium. Cocok untuk V60 dan tubruk.\nLangkah layar 4: Foto persegi 1:1 -> has -> has -> has2 -> Foto pertama jadi foto utama\nLangkah layar 5: 85.000 -> 250 -> Berat dipakai untuk ongkir -> Ada ukuran lain? Nyalakan Varian\nLangkah layar 6: Aktif: tampil dan bisa dibeli -> Simpan produk -> Produk sudah tampil di toko",
+      "structuredMeta": {
+        "demoSlug": "tambah-produk-pertama",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=physical"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:tarik-saldo",
+      "title": "Peta Layar UI: tarik saldo",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (tarik-saldo)\nAlamat Halaman: lapaq.id/merchant/admin/wallet\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Dompet | Belum ada penarikan | Rp1.240.000 | Penarikan saldo | -Rp1.250.000 | Rekening pencairan | Bank | Nomor rekening | Nama pemilik | Verifikasi email | ri***@kopilereng.id | BCA •••• 7890 | Kode OTP | Tarik saldo | Nominal | BCA •••• 7890, a.n. Rina Wulandari | Rp10.000 | Masukkan kode OTP | -Rp10.000 | Diproses\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Dompet -> Cair besok pukul 12.00 WIB -> Yang bisa ditarik\nLangkah layar 2: Isi rekening pencairan dulu -> Tambah -> BCA -> 1234567890 -> Rina Wulandari -> Lanjut\nLangkah layar 3: Kode dari email admin toko -> Verifikasi -> BCA •••• 7890 -> a.n. Rina Wulandari -> Ubah -> dis -> Rekening pencairan disimpan\nLangkah layar 4: Tarik saldo -> Minimal dan biaya tertera di sini -> Tarik semua -> 1.250.000 -> Rp1.240.000 -> Sudah dipotong biaya -> Lanjutkan penarikan\nLangkah layar 5: Cek nominal dan rekening -> Konfirmasi penarikan\nLangkah layar 6: Rp0 -> dis -> Status Diproses\nLangkah layar 7: Berhasil -> warn -> Berhasil: dana dikirim -> Mutasi saldo -> Uang masuk dan keluar",
+      "structuredMeta": {
+        "demoSlug": "tarik-saldo",
+        "pageUrl": "lapaq.id/merchant/admin/wallet"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:ubah-produk-dan-stok",
+      "title": "Peta Layar UI: ubah produk dan stok",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (ubah-produk-dan-stok)\nAlamat Halaman: lapaq.id/merchant/admin/products?type=physical\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Produk Fisik | Habis | Draft | Edit produk | Informasi dasar | Nama produk | Kategori | Deskripsi (opsional) | Foto produk | Pengaturan umum | Pre order | Harga, stok, dan berat | Harga jual | Harga diskon (opsional) | Stok | Berat | Publikasi | Aktif | Nonaktif\nAlur Interaksi di Layar:\nLangkah layar 1: Produk > Produk Fisik -> Cari nama produk atau SKU -> Atau tab Stok Habis -> Stok habis\nLangkah layar 2: Edit produk -> Data produk saat ini\nLangkah layar 3: Nama, foto, Deskripsi bisa diubah -> 68.000 -> Berat juga bisa diubah -> Bervarian? Ubah di kartu varian\nLangkah layar 4: Simpan perubahan -> Data terbaru tampil",
+      "structuredMeta": {
+        "demoSlug": "ubah-produk-dan-stok",
+        "pageUrl": "lapaq.id/merchant/admin/products?type=physical"
+      }
+    },
+    {
+      "sourceType": "DEMO_UI",
+      "sourceKey": "demo:ubah-profil-toko",
+      "title": "Peta Layar UI: ubah profil toko",
+      "category": "peta-ui",
+      "content": "Peta Tampilan Layar UI Lapaq (ubah-profil-toko)\nAlamat Halaman: lapaq.id/merchant/admin\nElemen, Tombol & Petunjuk di Layar: Masa percobaan | Statistik penjualan | Umum | Identitas visual toko | Logo | Favicon | Banner (opsional) | Nama toko | Alamat toko | Kategori usaha | Deskripsi singkat | Nomor WhatsApp toko | Nama kontak | Provinsi | Kota atau kabupaten | Kecamatan | Kelurahan atau desa | Kode pos | Alamat lengkap | Media sosial dan marketplace | Media Sosial | Instagram | TikTok | Facebook | YouTube\nAlur Interaksi di Layar:\nLangkah layar 1: Menu Pengaturan -> Tab Umum\nLangkah layar 2: Logo (1:1) -> has -> Ganti gambar -> logo-kopi-lereng.png -> Favicon (1:1) -> has -> Ganti gambar -> favicon.png -> Banner (opsional, 16:9) -> Ganti gambar -> banner-kopi.jpg\nLangkah layar 3: Makanan dan minuman -> Kopi arabika dan robusta dari kebun lereng Jawa Barat, disangrai tiap minggu. -> Maksimal 160 karakter\nLangkah layar 4: 81234567890 -> Tanpa angka 0 di depan\nLangkah layar 5: Rina Wulandari -> Jawa Barat -> Kota Bandung -> Coblong -> Cipaganti -> 40131 -> Kode pos terisi otomatis -> Jl. Cihampelas No. 12, dekat Masjid Al-Ikhlas\nLangkah layar 6: Tampil di footer toko -> https://instagram.com/kopilereng -> https://tiktok.com/@kopilereng -> https://shopee.co.id/kopilereng -> Isi yang Kakak punya saja\nLangkah layar 7: Simpan perubahan -> Pengaturan berhasil disimpan",
+      "structuredMeta": {
+        "demoSlug": "ubah-profil-toko",
+        "pageUrl": "lapaq.id/merchant/admin"
+      }
+    },
+    {
+      "sourceType": "LOCKED_POLICY",
+      "sourceKey": "policy:keuangan-qris-vs-manual",
+      "title": "Aturan Baku Pencairan Dana QRIS Lapaq vs Transfer Manual & Penarikan Dompet",
+      "category": "uang",
+      "content": "1. Pembayaran Online (QRIS Lapaq): terkonfirmasi otomatis oleh sistem (tidak bisa dikonfirmasi/dibatalkan manual). Dana masuk ke menu Dompet pada status \"Menunggu cair\", lalu berpindah ke \"Saldo tersedia\" keesokan harinya (H+1) pukul 12.00 WIB.\n2. Transfer Bank Manual & QRIS Statis: uang pembayaran dari pembeli masuk langsung ke rekening pribadi/toko milik seller (TIDAK masuk ke menu Dompet Lapaq). Seller wajib memeriksa bukti bayar dan menekan Konfirmasi pembayaran secara manual di detail pesanan.\n3. Penarikan Saldo Dompet: wajib mengisi Rekening Pencairan di menu Dompet dan memverifikasi kode OTP ke email pemilik (berlaku 10 menit). Diproses maksimal 1x24 jam kerja. Hanya boleh ada 1 penarikan berjalan (pending) pada satu waktu.",
+      "structuredMeta": {
+        "locked": true
+      }
+    },
+    {
+      "sourceType": "LOCKED_POLICY",
+      "sourceKey": "policy:refund-wajib-eskalasi",
+      "title": "Kebijakan Mutlak Refund, Pembatalan Langganan, dan Pembelian Add-on",
+      "category": "uang",
+      "content": "Setiap permintaan pengembalian dana (refund), pembatalan pembayaran paket langganan, add-on, atau kuota impor WAJIB langsung dicatat dan dieskalasi ke Admin/Tim Terkait tanpa pernah menjanjikan bahwa dana pasti dikembalikan.",
+      "structuredMeta": {
+        "locked": true,
+        "escalateImmediately": true
+      }
+    },
+    {
+      "sourceType": "LOCKED_POLICY",
+      "sourceKey": "policy:aturan-validasi-tersembunyi-produk-dan-toko",
+      "title": "Daftar Kendala Validasi Umum Produk, Kategori, Draft Impor, dan Pengaturan Toko",
+      "category": "troubleshooting",
+      "content": "1. Tombol Tambah Produk Terkunci: setiap produk di Lapaq wajib memiliki kategori. Jika belum ada kategori, muncul pesan \"Buat kategori terlebih dahulu\". Buat kategori dulu di menu Produk > Kategori Produk.\n2. Gagal Upload Foto atau Gagal Simpan Produk: foto produk wajib format JPG, PNG, atau WebP (format HEIC iPhone atau SVG ditolak), ukuran maksimal 2 MB per foto, maksimal 5 foto per produk, rasio disarankan persegi 1:1 (800x800 px). Untuk produk fisik, pastikan kolom Harga jual, Stok, dan Berat (gram) sudah diisi sebelum klik Simpan produk.\n3. Produk Hasil Migrasi/Impor Shopee Tidak Tampil di Toko: produk hasil impor otomatis berstatus Draft. Produk Draft TIDAK BISA diaktifkan lewat tombol saklar di tabel daftar produk; seller harus klik Edit pada produk tersebut, melengkapi Berat (gram) jika masih kosong, memilih status Publikasi = Aktif, lalu klik Simpan produk.\n4. Nama Toko & Link Toko: alamat link (slug) toko bersifat permanen sejak pendaftaran dan tidak dapat diubah, sedangkan Nama Toko hanya dapat diubah setiap 3 bulan sekali di Pengaturan > Umum.\n5. Perubahan Pengaturan Pembayaran meminta verifikasi kode OTP ke email pemilik toko.",
+      "structuredMeta": {
+        "locked": true
+      }
+    },
+    {
+      "sourceType": "LOCKED_POLICY",
+      "sourceKey": "policy:fitur-segera-hadir",
+      "title": "Daftar Fitur Lapaq yang Masih Berstatus Segera Hadir (Belum Aktif)",
+      "category": "fitur-status",
+      "content": "Fitur berikut tampil sebagai \"Segera hadir\" dan belum dapat digunakan saat ini: Pengaturan Domain Kustom sendiri, Pengaturan Notifikasi WhatsApp otomatis, Pengaturan Staf dan Akses (multi-admin), Gateway Pembayaran milik sendiri, serta Laporan Retur & Refund, Laporan Trafik & Sumber Trafik, dan Estimasi Pajak. Sampaikan jujur bahwa fitur sedang dikembangkan tanpa menjanjikan tanggal rilis.",
+      "structuredMeta": {
+        "featureStatus": "COMING_SOON",
+        "locked": true
+      }
+    },
+    {
+      "sourceType": "PUBLIC_FAQ",
+      "sourceKey": "faq:tiga-audiens-calon-seller-dan-pembeli",
+      "title": "Panduan Melayani Calon Seller Baru dan Pembeli Toko yang Salah Sambung",
+      "category": "umum",
+      "content": "1. Untuk Calon Seller Baru: pendaftaran akun dan pembuatan toko dilakukan di halaman pendaftaran seller Lapaq. Setiap toko baru langsung mendapatkan masa uji coba gratis selama 14 hari, mendukung penjualan produk fisik maupun produk digital, mendukung pengaturan kurir reguler & instan, serta pembayaran QRIS maupun transfer manual.\n2. Untuk Pembeli Akhir Toko Merchant (Salah Sambung): WhatsApp ini adalah layanan bantuan resmi platform pembuat website toko online Lapaq, bukan admin penjual barang dari toko tempat pembeli berbelanja. Arahkan pembeli secara sopan untuk mengecek status pesanan di menu \"Cek Pesanan\" pada website toko tempat ia berbelanja atau menghubungi tombol WhatsApp penjual yang tertera di halaman toko tersebut.",
+      "structuredMeta": {
+        "audience": "ALL"
+      }
+    }
+  ]
+}

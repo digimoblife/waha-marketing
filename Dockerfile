@@ -13,6 +13,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN mkdir -p /app/data
 RUN npx prisma generate
 RUN npm run build
 
@@ -30,6 +31,7 @@ RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/data ./data
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
@@ -37,8 +39,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Ensure directory permissions for sqlite & uploads
-RUN mkdir -p /app/public/uploads && chown -R nextjs:nodejs /app/public /app/prisma
+# Ensure directory permissions for portable knowledge bundle & media uploads
+RUN mkdir -p /app/public/uploads /app/data && chown -R nextjs:nodejs /app/public /app/data /app/prisma
 
 USER nextjs
 

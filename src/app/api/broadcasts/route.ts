@@ -114,6 +114,11 @@ export async function POST(req: NextRequest) {
 
     const user = await getRequestUser(req);
 
+    const enableAiFollowup = Boolean(body.enableAiFollowup);
+    const campaignGoal = body.campaignGoal
+      ? String(body.campaignGoal).trim().slice(0, 300)
+      : null;
+
     const campaign = await prisma.broadcastCampaign.create({
       data: {
         name,
@@ -122,6 +127,8 @@ export async function POST(req: NextRequest) {
         delayMinSec,
         delayMaxSec,
         status: startNow ? 'RUNNING' : 'DRAFT',
+        enableAiFollowup,
+        campaignGoal,
         totalCount: recipients.length,
         createdById: user?.id || null,
         createdByName: user?.name || user?.username || 'Operator',

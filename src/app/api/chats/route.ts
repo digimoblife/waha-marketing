@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sanitizePhone, normalizeJid } from '@/lib/phone';
 import { createLog } from '@/lib/logger';
+import { cancelDebouncedChat } from '@/lib/agent/debouncer';
 
 export const dynamic = 'force-dynamic';
 
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { chatId: rawChatId, status, assigneeId, reminderAt, reminderNote, clearReminder } = body;
+    const { chatId: rawChatId, status, agentMode, assigneeId, reminderAt, reminderNote, clearReminder } = body;
 
     if (!rawChatId) {
       return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
@@ -132,6 +133,18 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
       }
       data.status = status;
+    }
+
+    if (agentMode !== undefined) {
+      if (!['AI_ACTIVE', 'STEP_BY_STEP', 'WAITING_TECH', 'HUMAN_TAKEOVER'].includes(agentMode)) {
+        return NextResponse.json({ error: 'Invalid agentMode' }, { status: 400 });
+      }
+      data.agentMode = agentMode;
+      if (agentMode === 'HUMAN_TAKEOVER') {
+        cancelDebouncedChat(chatId);
+      } else if (agentMode === 'AI_ACTIVE') {
+        data.activeGuideState = null;
+      }
     }
 
     if (assigneeId !== undefined) {

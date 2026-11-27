@@ -7,6 +7,9 @@ import { isMessageProcessed, markMessageProcessed, extractStanzaId } from '@/lib
 import { detectMediaType, downloadWahaMedia, isWahaInternalMediaUrl } from '@/lib/waha-media';
 import { getWorkspaceSettings, isOutsideWorkingHours } from '@/lib/settings';
 import { waha } from '@/lib/waha';
+import { evaluateBotGate } from '@/lib/agent/security-guard';
+import { enqueueDebouncedMessage } from '@/lib/agent/debouncer';
+import { processFlushedAgentTurn } from '@/lib/agent/orchestrator';
 
 /**
  * WAHA Webhook Handler
@@ -411,13 +414,36 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // 3b. Away Message outside working hours (max 1x per 24h per chat, non-group only)
-          if (
+          // 3b. Agentic CS Gate & Debouncer (takes priority over static Away Message when Bot is active)
+          const botGate = evaluateBotGate({
+            fromMe: false,
+            chatId,
+            agentMode: updatedChat.agentMode,
+            settings,
+          });
+
+          if (botGate.shouldProcess) {
+            enqueueDebouncedMessage({
+              chatId,
+              senderPhone: phone,
+              item: {
+                msgId,
+                text,
+                mediaType,
+                mediaUrl,
+                quotedBody,
+                timestamp,
+              },
+              debounceMs: settings.agentConfig.debounceMs,
+              onFlush: processFlushedAgentTurn,
+            });
+          } else if (
             settings.slaHours.awayEnabled &&
             !updatedChat.isGroup &&
             settings.slaHours.awayMessage &&
             isOutsideWorkingHours(new Date(), settings.slaHours.workStart, settings.slaHours.workEnd)
           ) {
+            // Static Away Message only runs when AI Bot is not handling the message
             const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
             const lastSent = updatedChat.lastAwaySentAt ? updatedChat.lastAwaySentAt.getTime() : 0;
             if (lastSent < twentyFourHoursAgo) {

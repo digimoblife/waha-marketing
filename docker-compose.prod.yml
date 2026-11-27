@@ -1,6 +1,24 @@
 name: waha-marketing
 
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: waha-marketing-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-waha}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-waha_secret_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-waha_marketing}
+    volumes:
+      - waha_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-waha} -d $${POSTGRES_DB:-waha_marketing}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - waha-marketing-net
+
   waha:
     image: devlikeapro/waha:latest
     container_name: waha-marketing-engine
@@ -32,16 +50,25 @@ services:
       WAHA_BASE_URL: http://waha:3000
       WAHA_API_KEY: ${WAHA_API_KEY:-waha_marketing_secret_key}
       APP_DOCKER_URL: http://web:3050
-      NEXT_PUBLIC_APP_URL: https://waha.deployroom.my.id
-      DATABASE_URL: "file:/app/prisma/dev.db"
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://waha.deployroom.my.id}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://waha:waha_secret_2026@postgres:5432/waha_marketing?schema=public}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LAPAQ_INTERNAL_API_URL: ${LAPAQ_INTERNAL_API_URL:-}
+      INTERNAL_CS_API_KEY: ${INTERNAL_CS_API_KEY:-}
     volumes:
-      - ./prisma/dev.db:/app/prisma/dev.db
+      - ./data:/app/data
       - ./public/uploads:/app/public/uploads
       - ./waha_sessions:/app/waha_sessions:ro
     depends_on:
-      - waha
+      postgres:
+        condition: service_healthy
+      waha:
+        condition: service_started
     networks:
       - waha-marketing-net
+
+volumes:
+  waha_pgdata:
 
 networks:
   waha-marketing-net:

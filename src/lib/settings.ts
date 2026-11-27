@@ -16,10 +16,28 @@ export interface SlaHoursSettings {
   awayMessage: string;
 }
 
+export type BotMasterSwitch = 'OFF' | 'ON_ALWAYS' | 'ON_OUTSIDE_HOURS';
+export type LapaqConnectorMode = 'STANDALONE' | 'SANDBOX_API' | 'PRODUCTION_API';
+
+export interface AgentConfigSettings {
+  masterSwitch: BotMasterSwitch;
+  agentName: string;
+  debounceMs: number;
+  maxDailyAiTurnsPerChat: number;
+  primaryModel: string;
+  fallbackProModel: string;
+  liteModel: string;
+  embeddingModel: string;
+  lapaqConnectorMode: LapaqConnectorMode;
+  lapaqInternalApiUrl: string;
+  autoFollowupOnIssueResolved: boolean;
+}
+
 export interface WorkspaceSettings {
   guardrail: GuardrailSettings;
   slaHours: SlaHoursSettings;
   masterTags: string[];
+  agentConfig: AgentConfigSettings;
 }
 
 export const DEFAULT_SETTINGS: WorkspaceSettings = {
@@ -46,7 +64,35 @@ export const DEFAULT_SETTINGS: WorkspaceSettings = {
     'Merchant Utama',
     'Perlu Verifikasi',
   ],
+  agentConfig: {
+    masterSwitch: 'OFF',
+    agentName: 'Rani',
+    debounceMs: 5000,
+    maxDailyAiTurnsPerChat: 40,
+    primaryModel: 'gemini-3.8-flash',
+    fallbackProModel: 'gemini-4-argon',
+    liteModel: 'gemini-3.5-flash-lite',
+    embeddingModel: 'gemini-embedding-2',
+    lapaqConnectorMode: 'STANDALONE',
+    lapaqInternalApiUrl: '',
+    autoFollowupOnIssueResolved: false,
+  },
 };
+
+const DEPRECATED_MODEL_MIGRATIONS: Record<string, string> = {
+  'gemini-2.5-flash': 'gemini-3.8-flash',
+  'gemini-2.0-flash': 'gemini-3.8-flash',
+  'gemini-2.5-pro': 'gemini-4-argon',
+  'gemini-1.5-pro': 'gemini-4-argon',
+  'gemini-2.5-flash-lite': 'gemini-3.5-flash-lite',
+  'gemini-2.0-flash-lite': 'gemini-3.5-flash-lite',
+};
+
+function normalizeActiveModelId(modelId: unknown, fallback: string): string {
+  const clean = String(modelId || '').trim();
+  if (!clean) return fallback;
+  return DEPRECATED_MODEL_MIGRATIONS[clean] || clean;
+}
 
 export async function getWorkspaceSettings(): Promise<WorkspaceSettings> {
   try {
@@ -72,6 +118,29 @@ export async function getWorkspaceSettings(): Promise<WorkspaceSettings> {
       masterTags: Array.isArray(map.get('master_tags'))
         ? map.get('master_tags')
         : DEFAULT_SETTINGS.masterTags,
+      agentConfig: (() => {
+        const stored = map.get('agent_config') || {};
+        return {
+          ...DEFAULT_SETTINGS.agentConfig,
+          ...stored,
+          primaryModel: normalizeActiveModelId(
+            stored.primaryModel,
+            DEFAULT_SETTINGS.agentConfig.primaryModel
+          ),
+          fallbackProModel: normalizeActiveModelId(
+            stored.fallbackProModel,
+            DEFAULT_SETTINGS.agentConfig.fallbackProModel
+          ),
+          liteModel: normalizeActiveModelId(
+            stored.liteModel,
+            DEFAULT_SETTINGS.agentConfig.liteModel
+          ),
+          embeddingModel: normalizeActiveModelId(
+            stored.embeddingModel,
+            DEFAULT_SETTINGS.agentConfig.embeddingModel
+          ),
+        };
+      })(),
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -124,6 +193,34 @@ export async function saveWorkspaceSettings(partial: Partial<WorkspaceSettings>)
         where: { key: 'master_tags' },
         create: { key: 'master_tags', value: JSON.stringify(cleanTags) },
         update: { value: JSON.stringify(cleanTags) },
+      })
+    );
+  }
+
+  if (partial.agentConfig) {
+    const current = (await getWorkspaceSettings()).agentConfig;
+    const raw = { ...current, ...partial.agentConfig };
+    const validSwitches: BotMasterSwitch[] = ['OFF', 'ON_ALWAYS', 'ON_OUTSIDE_HOURS'];
+    const validModes: LapaqConnectorMode[] = ['STANDALONE', 'SANDBOX_API', 'PRODUCTION_API'];
+
+    const cleanAgent: AgentConfigSettings = {
+      masterSwitch: validSwitches.includes(raw.masterSwitch) ? raw.masterSwitch : 'OFF',
+      agentName: String(raw.agentName || 'Rani').trim().slice(0, 40) || 'Rani',
+      debounceMs: Math.max(1000, Math.min(20000, Number(raw.debounceMs) || 5000)),
+      maxDailyAiTurnsPerChat: Math.max(5, Math.min(500, Number(raw.maxDailyAiTurnsPerChat) || 40)),
+      primaryModel: normalizeActiveModelId(raw.primaryModel, 'gemini-3.8-flash'),
+      fallbackProModel: normalizeActiveModelId(raw.fallbackProModel, 'gemini-4-argon'),
+      liteModel: normalizeActiveModelId(raw.liteModel, 'gemini-3.5-flash-lite'),
+      embeddingModel: normalizeActiveModelId(raw.embeddingModel, 'gemini-embedding-2'),
+      lapaqConnectorMode: validModes.includes(raw.lapaqConnectorMode) ? raw.lapaqConnectorMode : 'STANDALONE',
+      lapaqInternalApiUrl: String(raw.lapaqInternalApiUrl || '').trim(),
+      autoFollowupOnIssueResolved: Boolean(raw.autoFollowupOnIssueResolved),
+    };
+    updates.push(
+      prisma.appSetting.upsert({
+        where: { key: 'agent_config' },
+        create: { key: 'agent_config', value: JSON.stringify(cleanAgent) },
+        update: { value: JSON.stringify(cleanAgent) },
       })
     );
   }

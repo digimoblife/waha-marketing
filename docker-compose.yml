@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: waha_marketing_postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-waha}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-waha_secret_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-waha_marketing}
+    volumes:
+      - waha_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-waha} -d $${POSTGRES_DB:-waha_marketing}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   waha:
     image: devlikeapro/waha:latest
     platform: linux/amd64
@@ -16,3 +34,6 @@ services:
       - WHATSAPP_HOOK_EVENTS=message.any,message.ack,session.status
     volumes:
       - ./waha_sessions:/app/.sessions
+
+volumes:
+  waha_pgdata:

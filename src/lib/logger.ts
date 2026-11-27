@@ -7,6 +7,8 @@ export type LogType =
   | 'SESSION_CHANGE'
   | 'AUTH'
   | 'BROADCAST'
+  | 'AGENT'
+  | 'SECURITY_WARNING'
   | 'ERROR'
   | 'CHAT_CLEARED';
 

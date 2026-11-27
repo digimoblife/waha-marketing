@@ -1,16 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { NextRequest } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
-const testDbPath = `/tmp/waha-marketing-test-${process.pid}.db`;
-process.env.DATABASE_URL = `file:${testDbPath}`;
+const basePgUrl =
+  process.env.TEST_POSTGRES_BASE_URL ||
+  'postgresql://waha:waha_secret_2026@localhost:5433';
+const testDbName = `waha_marketing_test_${process.pid}`;
+const adminDbUrl = `${basePgUrl}/postgres?schema=public`;
+const testDbUrl = `${basePgUrl}/${testDbName}?schema=public`;
 
-// Push schema to isolated temporary SQLite database before importing Prisma/routes
-execSync(`npx prisma db push --skip-generate`, {
-  env: { ...process.env, DATABASE_URL: `file:${testDbPath}` },
+process.env.DATABASE_URL = testDbUrl;
+process.env.AGENT_SKIP_TYPING_DELAY = '1';
+
+// Create isolated PostgreSQL test database, push schema, and build HNSW pgvector indexes
+const adminPrisma = new PrismaClient({ datasources: { db: { url: adminDbUrl } } });
+await adminPrisma.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${testDbName}" WITH (FORCE);`);
+await adminPrisma.$executeRawUnsafe(`CREATE DATABASE "${testDbName}";`);
+await adminPrisma.$disconnect();
+
+execSync(`npx prisma db push --skip-generate && node scripts/setup-pgvector-indexes.mjs`, {
+  env: { ...process.env, DATABASE_URL: testDbUrl },
   stdio: 'pipe',
 });
 
@@ -27,9 +38,9 @@ const { GET: overviewGET } = await import('../src/app/api/admin/overview/route.t
 
 test.after(async () => {
   await prisma.$disconnect();
-  if (fs.existsSync(testDbPath)) {
-    fs.unlinkSync(testDbPath);
-  }
+  const cleanupPrisma = new PrismaClient({ datasources: { db: { url: adminDbUrl } } });
+  await cleanupPrisma.$executeRawUnsafe(`DROP DATABASE IF EXISTS "${testDbName}" WITH (FORCE);`);
+  await cleanupPrisma.$disconnect();
 });
 
 function makeJsonReq(url: string, body: any, method = 'POST') {
@@ -391,4 +402,449 @@ test('Integration: templates CRUD, settings persistence, broadcast guardrail, an
   assert.equal(ovJson.traffic7d.length, 7);
   assert.ok(Array.isArray(ovJson.workload));
   assert.ok(ovJson.slaAlerts.some((a: any) => a.type === 'OVERDUE'));
+});
+
+test('Integration: PostgreSQL pgvector cosine search, SupportIssue, CaseMemory, and MerchantMemory work end-to-end', async () => {
+  const phone = '6281399998888';
+  const jid = `${phone}@c.us`;
+
+  const merchant = await prisma.contact.create({
+    data: {
+      phone,
+      jid,
+      name: 'Sari',
+      storeName: 'Sari Bakery',
+      lapaqStoreSlug: 'sari-bakery',
+      onboardingStage: 'NO_PRODUCT',
+      productCount: 0,
+    },
+  });
+
+  await prisma.merchantMemory.create({
+    data: {
+      contactId: merchant.id,
+      summary: 'Owner toko roti rumahan, biasa akses dashboard lewat HP Android.',
+      factsJson: JSON.stringify({ device: 'Android', category: 'Kuliner' }),
+    },
+  });
+
+  const chat = await prisma.chat.create({
+    data: {
+      id: jid,
+      name: 'Sari Bakery',
+      contactId: merchant.id,
+      agentMode: 'STEP_BY_STEP',
+      activeGuideState: JSON.stringify({ slug: 'tambah-produk-pertama', currentStep: 2 }),
+    },
+  });
+  assert.equal(chat.agentMode, 'STEP_BY_STEP');
+
+  // Create escalation issue and promote to CaseMemory
+  const issue = await prisma.supportIssue.create({
+    data: {
+      code: 'ISS-0001',
+      chatId: chat.id,
+      contactId: merchant.id,
+      category: 'UPLOAD_SAVE_ERROR',
+      title: 'Gagal simpan produk setelah upload foto iPhone',
+      symptomSummary: 'Foto sudah dipilih tapi tombol Simpan produk gagal menyimpan.',
+      stepsTried: 'Sudah cek koneksi internet.',
+      status: 'RESOLVED',
+      publicUserSolution: 'Ubah format foto HEIC ke JPG/PNG di bawah 2 MB dan pastikan kolom Berat (gram) terisi.',
+      isReusableCase: true,
+      followupConsent: true,
+    },
+  });
+
+  const caseMem = await prisma.caseMemory.create({
+    data: {
+      issueId: issue.id,
+      title: issue.title,
+      symptomPattern: issue.symptomSummary,
+      rootCause: 'Format gambar HEIC / ukuran > 2 MB atau kolom berat kosong',
+      verifiedSolution: issue.publicUserSolution!,
+      applicability: 'PERMANENT',
+    },
+  });
+
+  const chunkA = await prisma.knowledgeChunk.create({
+    data: {
+      sourceType: 'TUTORIAL',
+      sourceKey: 'tutorial:tambah-produk-pertama:foto',
+      title: 'Aturan Foto Produk Lapaq',
+      category: 'produk',
+      content: 'Gunakan foto persegi 1:1 format JPG, PNG, atau WebP maksimal 2 MB per foto.',
+      contentHash: 'hash_foto_1',
+    },
+  });
+
+  const chunkB = await prisma.knowledgeChunk.create({
+    data: {
+      sourceType: 'REPO_BUNDLE',
+      sourceKey: 'addon:low_stock_alerts:config',
+      title: 'Konfigurasi Add-on Info Stok Menipis',
+      category: 'addon',
+      content: 'Buka menu Add-on > Info Stok Menipis > klik Kelola > tab Konfigurasi > isi Jumlah stok minimum.',
+      contentHash: 'hash_stok_1',
+    },
+  });
+
+  // Build deterministic 768-dim test vectors
+  const makeVec = (axisIndex: number) => {
+    const arr = new Array(768).fill(0);
+    arr[axisIndex] = 1;
+    arr[(axisIndex + 1) % 768] = 0.25;
+    return `[${arr.join(',')}]`;
+  };
+
+  const vecPhoto = makeVec(0);
+  const vecStock = makeVec(10);
+
+  await prisma.$executeRawUnsafe(
+    `UPDATE "KnowledgeChunk" SET embedding = $1::vector WHERE id = $2`,
+    vecPhoto,
+    chunkA.id
+  );
+  await prisma.$executeRawUnsafe(
+    `UPDATE "KnowledgeChunk" SET embedding = $1::vector WHERE id = $2`,
+    vecStock,
+    chunkB.id
+  );
+  await prisma.$executeRawUnsafe(
+    `UPDATE "CaseMemory" SET embedding = $1::vector WHERE id = $2`,
+    vecPhoto,
+    caseMem.id
+  );
+
+  // Query nearest KnowledgeChunk for stock-limit vector
+  const topChunks = await prisma.$queryRawUnsafe<Array<{ id: string; sourceKey: string; distance: number }>>(
+    `SELECT id, "sourceKey", (embedding <=> $1::vector) AS distance
+     FROM "KnowledgeChunk"
+     WHERE "isActive" = true AND embedding IS NOT NULL
+     ORDER BY embedding <=> $1::vector ASC
+     LIMIT 2`,
+    vecStock
+  );
+
+  assert.equal(topChunks.length, 2);
+  assert.equal(topChunks[0].sourceKey, 'addon:low_stock_alerts:config');
+  assert.ok(Number(topChunks[0].distance) < 0.001);
+
+  // Query nearest CaseMemory for photo-upload vector
+  const topCases = await prisma.$queryRawUnsafe<Array<{ id: string; verifiedSolution: string }>>(
+    `SELECT id, "verifiedSolution"
+     FROM "CaseMemory"
+     WHERE "isActive" = true AND embedding IS NOT NULL
+     ORDER BY embedding <=> $1::vector ASC
+     LIMIT 1`,
+    vecPhoto
+  );
+  assert.equal(topCases.length, 1);
+  assert.match(topCases[0].verifiedSolution, /JPG\/PNG/);
+});
+
+test('Integration: Phase 2 Knowledge Indexer, Quick Notes, Agent Settings, and LapaqBridge STANDALONE/Fallback work end-to-end', async () => {
+  const { syncAllLapaqKnowledge, searchKnowledgeBase } = await import(
+    '../src/lib/agent/knowledge-indexer.ts'
+  );
+  const {
+    fetchMerchantDiagnostic,
+    fetchPlatformCatalog,
+    fetchPassiveMerchants,
+  } = await import('../src/lib/agent/lapaq-bridge.ts');
+  const { GET: agentSettingsGET, PATCH: agentSettingsPATCH } = await import(
+    '../src/app/api/admin/agent/settings/route.ts'
+  );
+  const {
+    GET: quickNotesGET,
+    POST: quickNotesPOST,
+    DELETE: quickNotesDELETE,
+  } = await import('../src/app/api/admin/agent/knowledge/quick-notes/route.ts');
+
+  // 1. Sync portable bundle (offline mode for deterministic speed)
+  const syncReport = await syncAllLapaqKnowledge({ includeOnline: false });
+  assert.ok(syncReport.bundleLoaded >= 40, `Expected >=40 bundle chunks, got ${syncReport.bundleLoaded}`);
+
+  // 2. Verify accurate retrieval for Case 3 (limit stok), Locked Financial Rules, and Coming Soon
+  const stockHits = await searchKnowledgeBase('konfigurasi jumlah stok minimum addon limit stok', 5);
+  assert.ok(stockHits.some((h) => h.sourceKey === 'addon:low_stock_alerts'));
+  assert.ok(stockHits.some((h) => /Jumlah stok minimum/i.test(h.content)));
+
+  const walletHits = await searchKnowledgeBase('dana qris menunggu cair saldo tersedia dompet', 5);
+  assert.ok(walletHits.some((h) => /12\.00 WIB/i.test(h.content)));
+
+  // 3. Quick Notes CRUD + automatic provider sanitization
+  const createNoteRes = await quickNotesPOST(
+    makeJsonReq('http://localhost/api/admin/agent/knowledge/quick-notes', {
+      title: 'Promo Akhir Tahun',
+      category: 'Promo',
+      content: 'Bayar lewat Midtrans otomatis dapat kuota tambahan.',
+    })
+  );
+  assert.equal(createNoteRes.status, 200);
+  const createdNote = (await createNoteRes.json()).note;
+  assert.doesNotMatch(createdNote.content, /midtrans/i);
+  assert.match(createdNote.content, /Pembayaran Online QRIS Lapaq/);
+
+  const listNotes = await (await quickNotesGET(new NextRequest('http://localhost/api/admin/agent/knowledge/quick-notes'))).json();
+  assert.equal(listNotes.notes.length, 1);
+
+  const delNoteRes = await quickNotesDELETE(
+    new NextRequest(`http://localhost/api/admin/agent/knowledge/quick-notes?id=${createdNote.id}`, {
+      method: 'DELETE',
+    })
+  );
+  assert.equal(delNoteRes.status, 200);
+
+  // 4. Agent Settings Master Switch persistence
+  const patchAgentRes = await agentSettingsPATCH(
+    makeJsonReq(
+      'http://localhost/api/admin/agent/settings',
+      {
+        masterSwitch: 'ON_OUTSIDE_HOURS',
+        agentName: 'Nadia',
+        lapaqConnectorMode: 'SANDBOX_API',
+        lapaqInternalApiUrl: 'http://127.0.0.1:59999', // intentionally unreachable port to test graceful fallback!
+      },
+      'PATCH'
+    )
+  );
+  assert.equal(patchAgentRes.status, 200);
+  const getAgentJson = await (await agentSettingsGET()).json();
+  assert.equal(getAgentJson.agentConfig.masterSwitch, 'ON_OUTSIDE_HOURS');
+  assert.equal(getAgentJson.agentConfig.agentName, 'Nadia');
+
+  // 5. LapaqBridge graceful fallback + VERIFIED_OWNER vs UNVERIFIED_CALLER enforcement
+  process.env.INTERNAL_CS_API_KEY = 'test_key_123';
+  const ownerDiag = await fetchMerchantDiagnostic('0813-9999-8888', 'sari-bakery');
+  assert.equal(ownerDiag.source, 'STANDALONE_LOCAL');
+  assert.equal(ownerDiag.callerAccessLevel, 'VERIFIED_OWNER');
+  assert.equal(ownerDiag.onboardingStage, 'NO_PRODUCT');
+
+  const strangerDiag = await fetchMerchantDiagnostic('0899-0000-1111', 'sari-bakery');
+  assert.equal(strangerDiag.callerAccessLevel, 'UNVERIFIED_CALLER');
+  assert.equal(strangerDiag.onboardingStage, undefined);
+
+  const catalog = await fetchPlatformCatalog();
+  assert.equal(catalog.trialDays, 14);
+
+  const passive = await fetchPassiveMerchants(3, 20);
+  assert.ok(passive.merchants.some((m) => m.storeSlug === 'sari-bakery'));
+});
+
+test('Integration: Phase 3 Orchestrator, Tool Calling, Closed-Loop Escalation -> CaseMemory -> Follow-up, Refund Trap & Takeover', async () => {
+  const { waha } = await import('../src/lib/waha.ts');
+  const { saveWorkspaceSettings } = await import('../src/lib/settings.ts');
+  const { setOrchestratorModelRunnerForTest } = await import(
+    '../src/lib/agent/orchestrator.ts'
+  );
+  const { executeAgentToolCall } = await import('../src/lib/agent/tools.ts');
+  const { flushChatBucket } = await import('../src/lib/agent/debouncer.ts');
+  const { POST: resolveIssuePOST } = await import(
+    '../src/app/api/issues/[id]/resolve/route.ts'
+  );
+  const { PATCH: agentModePATCH } = await import(
+    '../src/app/api/chats/[id]/agent-mode/route.ts'
+  );
+
+  // Stub WAHA network calls so no real WhatsApp container is needed during integration test
+  const sentWahaMessages: Array<{ chatId: string; text: string }> = [];
+  const origSendSeen = waha.sendSeen;
+  const origStartTyping = waha.startTyping;
+  const origStopTyping = waha.stopTyping;
+  const origSendText = waha.sendText;
+
+  waha.sendSeen = async () => ({ ok: true });
+  waha.startTyping = async () => ({ ok: true });
+  waha.stopTyping = async () => ({ ok: true });
+  waha.sendText = async (chatId: string, text: string) => {
+    sentWahaMessages.push({ chatId, text });
+    return { id: `waha_mock_${Date.now()}_${sentWahaMessages.length}` };
+  };
+
+  try {
+    await saveWorkspaceSettings({
+      agentConfig: {
+        masterSwitch: 'ON_ALWAYS',
+        agentName: 'Rani',
+        debounceMs: 1000,
+      } as any,
+    });
+
+    // Inject deterministic model runner that exercises real tools (search_case_memory & create_escalation_issue)
+    setOrchestratorModelRunnerForTest(async (req) => {
+      const lastPartText =
+        req.contents[req.contents.length - 1]?.parts?.map((p) => p.text || '').join('\n') || '';
+
+      if (/salah beli paket langganan.*refund/i.test(lastPartText)) {
+        // Deliberately return a forbidden refund promise to verify Output Guard blocks it!
+        return 'Tenang kak, dana kakak akan kami kembalikan 100% sekarang.';
+      }
+
+      // Check CaseMemory first!
+      const memResult = (await executeAgentToolCall(
+        'search_case_memory',
+        { symptom_query: 'gagal simpan produk ukuran variasi khusus' },
+        req.toolContext
+      )) as any;
+
+      if (memResult.foundCount > 0) {
+        return `Halo kak, kemarin sempat ada kendala serupa dan berhasil diatasi dengan cara: ${memResult.cases[0].verifiedSolution} Boleh dicoba dulu ya kak?`;
+      }
+
+      // Otherwise escalate via create_escalation_issue tool (Case 2)
+      const esc = (await executeAgentToolCall(
+        'create_escalation_issue',
+        {
+          category: 'UPLOAD_SAVE_ERROR',
+          title: 'Gagal simpan produk ukuran variasi khusus',
+          symptom_summary: 'gagal simpan produk ukuran variasi khusus padahal kolom sudah diisi',
+          steps_tried: 'Sudah cek format foto dan berat.',
+        },
+        req.toolContext
+      )) as any;
+
+      return `Baik kak, dengan Rani di sini. Rani catat dulu kendala Kakak (${esc.issueCode}) untuk diteruskan ke divisi teknis ya. Apakah boleh Rani hubungi Kakak kembali jika tim teknis sudah menangani masalah ini?`;
+    });
+
+    // 1. Merchant A reports an anomalous issue -> escalated to SupportIssue -> consents to follow-up
+    const phoneA = '6281277778888';
+    const chatIdA = `${phoneA}@c.us`;
+
+    await webhookPOST(
+      makeJsonReq('http://localhost/api/webhook', {
+        event: 'message.any',
+        payload: {
+          id: `false_${chatIdA}_CASE2_M1`,
+          fromMe: false,
+          from: chatIdA,
+          pushName: 'Toko Maju',
+          body: 'Kak saya sudah coba tapi tetap tidak bisa, gagal simpan produk ukuran variasi khusus',
+          timestamp: Math.floor(Date.now() / 1000),
+        },
+      })
+    );
+    await flushChatBucket(chatIdA);
+
+    assert.equal(sentWahaMessages.length, 1);
+    assert.match(sentWahaMessages[0].text, /divisi teknis/i);
+
+    const createdIssue = await prisma.supportIssue.findFirst({
+      where: { chatId: chatIdA },
+      orderBy: { createdAt: 'desc' },
+    });
+    assert.ok(createdIssue);
+    assert.equal(createdIssue.status, 'OPEN');
+    assert.equal(createdIssue.followupConsent, false);
+
+    // Merchant A replies "Boleh kak" -> fast-path updates followupConsent = true!
+    await webhookPOST(
+      makeJsonReq('http://localhost/api/webhook', {
+        event: 'message.any',
+        payload: {
+          id: `false_${chatIdA}_CASE2_M2`,
+          fromMe: false,
+          from: chatIdA,
+          body: 'Boleh kak',
+          timestamp: Math.floor(Date.now() / 1000) + 2,
+        },
+      })
+    );
+    await flushChatBucket(chatIdA);
+
+    const updatedConsentIssue = await prisma.supportIssue.findUnique({
+      where: { id: createdIssue.id },
+    });
+    assert.equal(updatedConsentIssue?.followupConsent, true);
+
+    // 2. Admin resolves issue on /api/issues/[id]/resolve with isReusableCase=true & sendFollowupNow=true
+    const resolveRes = await resolveIssuePOST(
+      makeJsonReq(`http://localhost/api/issues/${createdIssue.id}/resolve`, {
+        techResolutionNote: 'Nama varian melebihi batas simbol.',
+        publicUserSolution: 'Pastikan nama tiap varian tidak memakai karakter khusus dan berat tiap varian terisi.',
+        isReusableCase: true,
+        sendFollowupNow: true,
+      }),
+      { params: { id: createdIssue.id } }
+    );
+    assert.equal(resolveRes.status, 200);
+    const resolveJson = await resolveRes.json();
+    assert.ok(resolveJson.promotedCaseMemoryId);
+    assert.equal(resolveJson.followup?.ok, true);
+
+    // Verify Merchant A received the proactive resolution follow-up!
+    assert.ok(
+      sentWahaMessages.some(
+        (m) => m.chatId === chatIdA && /sudah selesai ditangani oleh tim teknis/i.test(m.text)
+      )
+    );
+
+    // 3. Merchant B reports the same symptom -> Agent finds the new CaseMemory and suggests the verified solution!
+    const phoneB = '6281266665555';
+    const chatIdB = `${phoneB}@c.us`;
+    await webhookPOST(
+      makeJsonReq('http://localhost/api/webhook', {
+        event: 'message.any',
+        payload: {
+          id: `false_${chatIdB}_CASE2_B1`,
+          fromMe: false,
+          from: chatIdB,
+          pushName: 'Toko Baru',
+          body: 'Kak kok saya gagal simpan produk ukuran variasi khusus ya?',
+          timestamp: Math.floor(Date.now() / 1000) + 5,
+        },
+      })
+    );
+    await flushChatBucket(chatIdB);
+
+    const replyToB = sentWahaMessages.find((m) => m.chatId === chatIdB);
+    assert.ok(replyToB);
+    assert.match(replyToB.text, /karakter khusus dan berat tiap varian terisi/i);
+
+    // 4. Refund Trap Test: auto-creates REFUND_REQUEST issue & Output Guard blocks refund promise!
+    const phoneC = '6281244443333';
+    const chatIdC = `${phoneC}@c.us`;
+    await webhookPOST(
+      makeJsonReq('http://localhost/api/webhook', {
+        event: 'message.any',
+        payload: {
+          id: `false_${chatIdC}_REFUND1`,
+          fromMe: false,
+          from: chatIdC,
+          body: 'Saya salah beli paket langganan, tolong refund uang saya sekarang!',
+          timestamp: Math.floor(Date.now() / 1000) + 10,
+        },
+      })
+    );
+    await flushChatBucket(chatIdC);
+
+    const replyToC = sentWahaMessages.find((m) => m.chatId === chatIdC);
+    assert.ok(replyToC);
+    assert.doesNotMatch(replyToC.text, /kembalikan 100%/i);
+    const refundIssue = await prisma.supportIssue.findFirst({
+      where: { chatId: chatIdC, category: 'REFUND_REQUEST' },
+    });
+    assert.ok(refundIssue);
+
+    // 5. Chat agent-mode toggle endpoint switches chat to HUMAN_TAKEOVER cleanly
+    const modeRes = await agentModePATCH(
+      makeJsonReq(
+        `http://localhost/api/chats/${encodeURIComponent(chatIdB)}/agent-mode`,
+        { agentMode: 'HUMAN_TAKEOVER' },
+        'PATCH'
+      ),
+      { params: { id: chatIdB } }
+    );
+    assert.equal(modeRes.status, 200);
+    assert.equal((await modeRes.json()).chat.agentMode, 'HUMAN_TAKEOVER');
+  } finally {
+    setOrchestratorModelRunnerForTest(null);
+    waha.sendSeen = origSendSeen;
+    waha.startTyping = origStartTyping;
+    waha.stopTyping = origStopTyping;
+    waha.sendText = origSendText;
+    await saveWorkspaceSettings({
+      agentConfig: { masterSwitch: 'OFF' } as any,
+    });
+  }
 });

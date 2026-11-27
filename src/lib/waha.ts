@@ -164,6 +164,73 @@ export const waha = {
     return await res.json();
   },
 
+  async sendSeen(chatId: string, session = DEFAULT_SESSION) {
+    try {
+      const res = await fetch(`${WAHA_URL}/api/sendSeen`, {
+        method: 'POST',
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ session, chatId }),
+      });
+      return await res.json().catch(() => ({ ok: res.ok }));
+    } catch {
+      return { ok: false };
+    }
+  },
+
+  async startTyping(chatId: string, session = DEFAULT_SESSION) {
+    try {
+      const res = await fetch(`${WAHA_URL}/api/startTyping`, {
+        method: 'POST',
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ session, chatId }),
+      });
+      return await res.json().catch(() => ({ ok: res.ok }));
+    } catch {
+      return { ok: false };
+    }
+  },
+
+  async stopTyping(chatId: string, session = DEFAULT_SESSION) {
+    try {
+      const res = await fetch(`${WAHA_URL}/api/stopTyping`, {
+        method: 'POST',
+        headers: getHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ session, chatId }),
+      });
+      return await res.json().catch(() => ({ ok: res.ok }));
+    } catch {
+      return { ok: false };
+    }
+  },
+
+  async deliverHumanLikeReply(
+    chatId: string,
+    text: string,
+    options?: {
+      replyTo?: string;
+      session?: string;
+      skipDelays?: boolean;
+    }
+  ) {
+    const session = options?.session || DEFAULT_SESSION;
+    const skipDelays =
+      options?.skipDelays ?? (process.env.NODE_ENV === 'test' || process.env.AGENT_SKIP_TYPING_DELAY === '1');
+
+    await this.sendSeen(chatId, session);
+    if (!skipDelays) {
+      await new Promise((r) => setTimeout(r, 900 + Math.floor(Math.random() * 500)));
+    }
+
+    await this.startTyping(chatId, session);
+    if (!skipDelays) {
+      const typingMs = Math.min(4500, Math.max(1600, text.length * 20));
+      await new Promise((r) => setTimeout(r, typingMs));
+    }
+
+    await this.stopTyping(chatId, session);
+    return await this.sendText(chatId, text, options?.replyTo, session);
+  },
+
   async sendImage(
     chatId: string,
     fileUrl: string,
