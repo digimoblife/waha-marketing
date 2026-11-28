@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sanitizePhone, normalizeJid } from '@/lib/phone';
+import { sanitizePhone, normalizeJid, isLid } from '@/lib/phone';
+import { healDuplicateLidChats, resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
+import { getWorkspaceSettings } from '@/lib/settings';
 import { cancelDebouncedChat } from '@/lib/agent/debouncer';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +34,9 @@ export async function GET() {
         data: { jid: canonicalJid },
       }).catch(() => null);
     }
+
+    // 3. Auto-heal & merge any split @lid vs @c.us chats/contacts
+    await healDuplicateLidChats(prisma);
 
     const chats = await prisma.chat.findMany({
       include: {
@@ -66,20 +71,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'chatId is required' }, { status: 400 });
     }
 
-    const chatId = normalizeJid(rawChatId);
-    const phone = sanitizePhone(chatId.replace(/@c\.us$/, '').replace(/@g\.us$/, ''));
+    let chatId = normalizeJid(rawChatId);
+    if (isLid(chatId)) {
+      const resolved = resolveLidToPhone(chatId);
+      if (resolved) {
+        chatId = `${sanitizePhone(resolved)}@c.us`;
+      }
+    }
+    const phone = sanitizePhone(chatId.replace(/@c\.us$/, '').replace(/@g\.us$/, '').replace(/@lid$/, ''));
 
-    // Find contact if exists by jid or phone
+    // Find contact if exists by jid, lid, or phone
     const contact = await prisma.contact.findFirst({
       where: {
         OR: [
           { jid: chatId },
+          { lid: normalizeJid(rawChatId) },
           { phone },
         ],
       },
     });
+    if (contact?.jid && contact.jid.endsWith('@c.us')) {
+      chatId = contact.jid;
+    }
 
     const displayName = contact?.name || contact?.pushName || phone;
+    const settings = await getWorkspaceSettings();
+    const initialMode = chatId.endsWith('@g.us')
+      ? 'HUMAN_TAKEOVER'
+      : settings.agentConfig.defaultChatAgentMode || 'AI_ACTIVE';
 
     // Ensure Chat exists in database
     const chat = await prisma.chat.upsert({
@@ -88,6 +107,7 @@ export async function POST(req: NextRequest) {
         id: chatId,
         name: displayName,
         isGroup: chatId.endsWith('@g.us'),
+        agentMode: initialMode,
         unreadCount: 0,
         contactId: contact?.id || null,
       },
@@ -115,10 +135,42 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH: Update chat status, assigneeId, or follow-up reminder
+// PATCH: Update chat status, agentMode (single or bulk), assigneeId, or follow-up reminder
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
+
+    // Bulk per-chat AI ON/OFF toggle from Inbox list
+    if (body.bulkAgentMode && ['AI_ACTIVE', 'HUMAN_TAKEOVER'].includes(body.bulkAgentMode)) {
+      const targetMode = body.bulkAgentMode as 'AI_ACTIVE' | 'HUMAN_TAKEOVER';
+      const ids: string[] | undefined = Array.isArray(body.chatIds)
+        ? body.chatIds.map((id: unknown) => normalizeJid(String(id))).filter(Boolean)
+        : undefined;
+
+      if (targetMode === 'HUMAN_TAKEOVER' && ids) {
+        for (const id of ids) cancelDebouncedChat(id);
+      }
+
+      const result = await prisma.chat.updateMany({
+        where: {
+          isGroup: false,
+          ...(ids && ids.length > 0 ? { id: { in: ids } } : {}),
+        },
+        data: {
+          agentMode: targetMode,
+          ...(targetMode === 'AI_ACTIVE' ? { activeGuideState: null } : {}),
+        },
+      });
+
+      await createLog(
+        'AGENT',
+        'SUCCESS',
+        `Mode AI massal diubah ke ${targetMode} pada ${result.count} obrolan`
+      );
+
+      return NextResponse.json({ ok: true, updatedCount: result.count, agentMode: targetMode });
+    }
+
     const { chatId: rawChatId, status, agentMode, assigneeId, reminderAt, reminderNote, clearReminder } = body;
 
     if (!rawChatId) {

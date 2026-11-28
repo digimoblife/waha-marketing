@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { getWorkspaceSettings } from '@/lib/settings';
 import { sanitizePhone } from '@/lib/phone';
 import { resolveCallerVerification, sanitizeKnowledgeText, type CallerAccessLevel } from './knowledge-sanitizer';
+import { getEffectiveInternalCsApiKey } from './secrets';
 
 export interface MerchantDiagnosticResult {
   source: 'STANDALONE_LOCAL' | 'LAPAQ_API';
@@ -86,7 +87,7 @@ async function getBridgeEndpointConfig(): Promise<{ baseUrl: string; apiKey: str
   )
     .trim()
     .replace(/\/$/, '');
-  const apiKey = (process.env.INTERNAL_CS_API_KEY || '').trim();
+  const apiKey = await getEffectiveInternalCsApiKey();
 
   if (mode === 'STANDALONE' || !rawUrl || !apiKey) {
     return null;

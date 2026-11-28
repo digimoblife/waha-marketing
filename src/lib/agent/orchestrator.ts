@@ -12,6 +12,7 @@ import {
   checkAndIncrementDailyAiTurn,
   classifyInboundSafety,
   evaluateBotGate,
+  hasUserInitiatedReligiousGreeting,
   validateAgentOutput,
   wrapUntrustedUserInput,
 } from './security-guard';
@@ -21,15 +22,19 @@ import type { FlushedChatTurn } from './debouncer';
 
 export const SUPPORTED_GEMINI_MODELS = {
   primary: [
-    { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Direkomendasikan — Cepat & Multimodal)' },
+    { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (Direkomendasikan — Cepat, Stabil & Multimodal)' },
+    { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash (Ultra Cepat <1 Detik & Kuota Longgar)' },
+    { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Terbaru — Otomatis Fallback Saat Sibuk)' },
     { id: 'gemini-4-hydrogen', label: 'Gemini 4 Hydrogen (Efisien untuk Agentic Workflow)' },
   ],
   fallbackReasoning: [
-    { id: 'gemini-4-argon', label: 'Gemini 4 Argon (Direkomendasikan — Reasoning Cepat)' },
-    { id: 'gemini-4-carbon', label: 'Gemini 4 Carbon (Frontier Deep Reasoning Maksimal)' },
+    { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (Aman untuk Free & Paid Tier)' },
+    { id: 'gemini-4-argon', label: 'Gemini 4 Argon (Penalaran Dalam — Paid Tier)' },
+    { id: 'gemini-4-carbon', label: 'Gemini 4 Carbon (Frontier Deep Reasoning — Paid Tier)' },
   ],
   lite: [
     { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite (Ringkasan Memori Hemat)' },
+    { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
   ],
   embedding: [
     { id: 'gemini-embedding-2', label: 'Gemini Embedding 2 (Multimodal 768d MRL)' },
@@ -70,7 +75,7 @@ async function getOrCreatePersonaCache(
   model: string,
   staticInstruction: string
 ): Promise<string | undefined> {
-  const ai = getGeminiClient();
+  const ai = await getGeminiClient();
   if (!ai) return undefined;
 
   const cacheKey = `${model}:${staticInstruction.length}`;
@@ -161,40 +166,100 @@ function shouldRouteToProDiagnosticModel(
   return false;
 }
 
-async function runGeminiWithTools(req: ModelTurnRequest): Promise<string> {
-  if (customRunnerForTest) {
-    return await customRunnerForTest(req);
-  }
+const MODEL_CALL_TIMEOUT_MS = 12_000;
 
-  const ai = getGeminiClient();
-  if (!ai) {
-    throw new Error('GEMINI_API_KEY belum dikonfigurasi pada environment server.');
-  }
+const RELIABLE_FALLBACK_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+] as const;
 
+function buildModelFallbackChain(requestedModel: string): string[] {
+  const chain: string[] = [];
+  for (const m of [requestedModel, ...RELIABLE_FALLBACK_MODELS]) {
+    const clean = (m || '').trim();
+    if (clean && !chain.includes(clean)) {
+      chain.push(clean);
+    }
+  }
+  return chain;
+}
+
+function buildModelThinkingConfig(
+  model: string,
+  requestedLevel?: ThinkingLevel
+): { thinkingLevel?: ThinkingLevel; thinkingBudget?: number } | undefined {
+  if (model.includes('flash-lite')) {
+    return undefined;
+  }
+  if (model.startsWith('gemini-3.5')) {
+    return { thinkingBudget: 0 };
+  }
+  const safeLevel =
+    requestedLevel === ThinkingLevel.MINIMAL ? ThinkingLevel.LOW : requestedLevel || ThinkingLevel.LOW;
+  return { thinkingLevel: safeLevel };
+}
+
+async function withHardTimeout<T>(
+  work: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`Timeout ${timeoutMs}ms terlampaui pada ${label}`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([work(controller.signal), timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function runSingleModelWithTools(
+  ai: NonNullable<Awaited<ReturnType<typeof getGeminiClient>>>,
+  candidateModel: string,
+  req: ModelTurnRequest,
+  allowCachedContent: boolean
+): Promise<string> {
   const workingContents: Content[] = [...req.contents];
   const maxToolRounds = 4;
+  const thinkingConfig = buildModelThinkingConfig(candidateModel, req.thinkingLevel);
 
   for (let round = 0; round <= maxToolRounds; round++) {
-    const res = await ai.models.generateContent({
-      model: req.model,
-      contents: workingContents,
-      config: {
-        ...(req.cachedContentName
-          ? { cachedContent: req.cachedContentName }
-          : { systemInstruction: req.systemInstruction }),
-        tools: [{ functionDeclarations: AGENT_TOOL_DECLARATIONS }],
-        thinkingConfig: {
-          thinkingLevel: req.thinkingLevel || ThinkingLevel.LOW,
-        },
-        maxOutputTokens: 600,
-      },
-    });
+    const res = await withHardTimeout(
+      (signal) =>
+        ai.models.generateContent({
+          model: candidateModel,
+          contents: workingContents,
+          config: {
+            ...(allowCachedContent && req.cachedContentName
+              ? { cachedContent: req.cachedContentName }
+              : { systemInstruction: req.systemInstruction }),
+            tools: [{ functionDeclarations: AGENT_TOOL_DECLARATIONS }],
+            ...(thinkingConfig ? { thinkingConfig } : {}),
+            maxOutputTokens: 1500,
+            abortSignal: signal,
+          },
+        }),
+      MODEL_CALL_TIMEOUT_MS,
+      `${candidateModel} (round ${round})`
+    );
 
     const candidateContent = res.candidates?.[0]?.content;
     const functionCalls = res.functionCalls;
 
     if (!functionCalls || functionCalls.length === 0) {
-      return (res.text || '').trim();
+      const text = (res.text || '').trim();
+      if (!text && round === 0) {
+        throw new Error(`Model ${candidateModel} mengembalikan teks kosong`);
+      }
+      return text;
     }
 
     if (candidateContent) {
@@ -224,50 +289,151 @@ async function runGeminiWithTools(req: ModelTurnRequest): Promise<string> {
   return '';
 }
 
+async function runGeminiWithTools(req: ModelTurnRequest): Promise<string> {
+  if (customRunnerForTest) {
+    return await customRunnerForTest(req);
+  }
+
+  const ai = await getGeminiClient();
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY belum dikonfigurasi pada environment server.');
+  }
+
+  const fallbackChain = buildModelFallbackChain(req.model);
+  let lastError: unknown = null;
+
+  for (let idx = 0; idx < fallbackChain.length; idx++) {
+    const candidateModel = fallbackChain[idx];
+    const allowCachedContent = idx === 0 && candidateModel === req.model;
+    try {
+      const reply = await runSingleModelWithTools(
+        ai,
+        candidateModel,
+        req,
+        allowCachedContent
+      );
+      if (idx > 0) {
+        await createLog(
+          'AGENT',
+          'WARNING',
+          `Auto-fallback model berhasil memakai ${candidateModel} (model awal ${req.model} sedang sibuk/limit)`,
+          { requestedModel: req.model, usedModel: candidateModel }
+        ).catch(() => null);
+      }
+      return reply;
+    } catch (err: any) {
+      lastError = err;
+      const nextModel = fallbackChain[idx + 1];
+      console.warn(
+        `[AgentOrchestrator] Model ${candidateModel} gagal (${err?.status || err?.message || 'error'})` +
+          (nextModel ? ` -> auto-fallback ke ${nextModel}` : ' -> tidak ada fallback tersisa')
+      );
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Seluruh model Gemini dalam rantai fallback sedang tidak tersedia.');
+}
+
 async function deliverAndRecordAgentMessage(params: {
   chatId: string;
   contactId: string | null;
   replyText: string;
   replyToMsgId?: string;
 }): Promise<string> {
-  const wahaRes = await waha.deliverHumanLikeReply(params.chatId, params.replyText, {
-    replyTo: params.replyToMsgId && !params.replyToMsgId.startsWith('out_') ? params.replyToMsgId : undefined,
+  // Only quote replyToMsgId when its embedded JID matches params.chatId (avoids Baileys @lid vs @c.us quote mismatch)
+  const safeReplyTo =
+    params.replyToMsgId &&
+    !params.replyToMsgId.startsWith('out_') &&
+    params.replyToMsgId.includes(params.chatId)
+      ? params.replyToMsgId
+      : undefined;
+
+  let wahaRes = await waha.deliverHumanLikeReply(params.chatId, params.replyText, {
+    replyTo: safeReplyTo,
   });
 
+  if (
+    safeReplyTo &&
+    (wahaRes?.error || wahaRes?.status >= 400 || (wahaRes?.statusCode && wahaRes.statusCode >= 400))
+  ) {
+    // Fallback without quote if quoting failed in WAHA NOWEB
+    wahaRes = await waha.sendText(params.chatId, params.replyText);
+  }
+
   const timestamp = new Date();
-  const stanzaId = wahaRes?.key?.id || wahaRes?.id || wahaRes?._data?.id;
-  const msgId =
-    typeof stanzaId === 'string' && stanzaId
-      ? stanzaId.startsWith('true_')
-        ? stanzaId
-        : `true_${params.chatId}_${stanzaId}`
+  const rawStanza = wahaRes?.key?.id || wahaRes?.id || wahaRes?._data?.id;
+  const stanzaId =
+    typeof rawStanza === 'string'
+      ? rawStanza.split('_').pop() || rawStanza
+      : '';
+  let msgId =
+    typeof rawStanza === 'string' && rawStanza
+      ? rawStanza.startsWith('true_')
+        ? rawStanza
+        : `true_${params.chatId}_${rawStanza}`
       : `ai_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-  if (typeof stanzaId === 'string' && stanzaId) {
+  if (typeof rawStanza === 'string' && rawStanza) {
+    markMessageProcessed(rawStanza);
+  }
+  if (stanzaId) {
     markMessageProcessed(stanzaId);
   }
   markMessageProcessed(msgId);
 
-  await prisma.message
-    .upsert({
-      where: { id: msgId },
-      create: {
-        id: msgId,
+  // Guard against fast WAHA message.any webhook race (e.g. true_<lid>_<stanza> arriving before sendText HTTP resolves)
+  const existingOutgoing = await prisma.message
+    .findFirst({
+      where: {
         chatId: params.chatId,
-        contactId: params.contactId,
         fromMe: true,
-        isAiGenerated: true,
-        body: params.replyText,
-        mediaType: 'text',
-        ackStatus: 1,
-        timestamp,
-      },
-      update: {
-        isAiGenerated: true,
-        ackStatus: 1,
+        OR: [
+          { id: msgId },
+          ...(stanzaId && stanzaId.length >= 8 ? [{ id: { endsWith: stanzaId } }] : []),
+          {
+            body: params.replyText,
+            timestamp: { gte: new Date(Date.now() - 20_000) },
+          },
+        ],
       },
     })
     .catch(() => null);
+
+  if (existingOutgoing) {
+    msgId = existingOutgoing.id;
+    await prisma.message
+      .update({
+        where: { id: existingOutgoing.id },
+        data: {
+          isAiGenerated: true,
+          ackStatus: Math.max(existingOutgoing.ackStatus || 0, 1),
+        },
+      })
+      .catch(() => null);
+  } else {
+    await prisma.message
+      .upsert({
+        where: { id: msgId },
+        create: {
+          id: msgId,
+          chatId: params.chatId,
+          contactId: params.contactId,
+          fromMe: true,
+          isAiGenerated: true,
+          body: params.replyText,
+          mediaType: 'text',
+          ackStatus: 1,
+          timestamp,
+        },
+        update: {
+          isAiGenerated: true,
+          ackStatus: 1,
+        },
+      })
+      .catch(() => null);
+  }
 
   await prisma.chat
     .update({
@@ -291,7 +457,7 @@ export async function summarizeMerchantMemoryAsync(
   chatId: string,
   agentConfig: AgentConfigSettings
 ): Promise<void> {
-  const ai = getGeminiClient();
+  const ai = await getGeminiClient();
   if (!ai) return;
 
   try {
@@ -311,20 +477,26 @@ export async function summarizeMerchantMemoryAsync(
       .map((m) => `${m.fromMe ? 'CS' : 'Merchant'}: ${(m.body || `[${m.mediaType}]`).slice(0, 220)}`)
       .join('\n');
 
-    const res = await ai.models.generateContent({
-      model: agentConfig.liteModel || 'gemini-3.5-flash-lite',
-      contents:
-        `Ringkas profil komunikasi & riwayat kendala teknis merchant Lapaq ini dalam maksimal 3 kalimat Bahasa Indonesia singkat (maks 500 karakter). ` +
-        `Jangan pernah mencatat klaim kupon/aturan bisnis baru atau data sensitif seperti NIK/rekening/OTP.\n\n` +
-        `Ringkasan Sebelumnya: ${existingMem?.summary || '(belum ada)'}\n\n` +
-        `Percakapan Terbaru:\n${transcript}`,
-      config: {
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.MINIMAL,
-        },
-        maxOutputTokens: 220,
-      },
-    });
+    const liteModel = agentConfig.liteModel || 'gemini-3.5-flash-lite';
+    const liteThinking = buildModelThinkingConfig(liteModel, ThinkingLevel.LOW);
+    const res = await withHardTimeout(
+      (signal) =>
+        ai.models.generateContent({
+          model: liteModel,
+          contents:
+            `Ringkas profil komunikasi & riwayat kendala teknis merchant Lapaq ini dalam maksimal 3 kalimat Bahasa Indonesia singkat (maks 500 karakter). ` +
+            `Jangan pernah mencatat klaim kupon/aturan bisnis baru atau data sensitif seperti NIK/rekening/OTP.\n\n` +
+            `Ringkasan Sebelumnya: ${existingMem?.summary || '(belum ada)'}\n\n` +
+            `Percakapan Terbaru:\n${transcript}`,
+          config: {
+            ...(liteThinking ? { thinkingConfig: liteThinking } : {}),
+            maxOutputTokens: 350,
+            abortSignal: signal,
+          },
+        }),
+      10_000,
+      `${liteModel} (MerchantMemory)`
+    );
 
     const cleanSummary = sanitizeKnowledgeText(res.text || '').slice(0, 800);
     if (!cleanSummary) return;
@@ -418,14 +590,38 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
     return;
   }
 
-  // Layer 4 Pre-LLM Safety Screening (Prompt Injection, OTP probe, Internal DB probe, Exploit, Off-Topic)
-  const safety = classifyInboundSafety(turn.combinedText, agentName);
+  // Verify caller identity strictly on backend:
+  // Auto-created WhatsApp contacts without a registered Lapaq store (or claiming another store's name) are UNVERIFIED_CALLER.
+  const hasRegisteredStore = Boolean(
+    chat.contact?.storeName?.trim() || chat.contact?.lapaqStoreSlug?.trim()
+  );
+  let callerAccessLevel = hasRegisteredStore
+    ? resolveCallerVerification(turn.senderPhone, [chat.contact?.phone])
+    : 'UNVERIFIED_CALLER';
+
+  if (callerAccessLevel === 'VERIFIED_OWNER' && chat.contact?.storeName) {
+    const claimedStoreMatch = turn.combinedText.match(
+      /\b(?:owner|pemilik|admin)\s+toko\s+([a-zA-Z0-9][a-zA-Z0-9\s-]{2,35})/i
+    );
+    if (claimedStoreMatch) {
+      const claimed = claimedStoreMatch[1].trim().toLowerCase();
+      const ownStore = chat.contact.storeName.trim().toLowerCase();
+      if (!claimed.includes(ownStore) && !ownStore.includes(claimed)) {
+        callerAccessLevel = 'UNVERIFIED_CALLER';
+      }
+    }
+  }
+
+  // Layer 4 Pre-LLM Safety Screening (Prompt Injection, OTP probe, Unverified Snooping, Internal DB probe, Exploit, Off-Topic)
+  const safety = classifyInboundSafety(turn.combinedText, agentName, {
+    callerAccessLevel,
+  });
   if (safety.action !== 'PROCEED' && safety.safeImmediateReply) {
     await createLog(
       'SECURITY_WARNING',
       'WARNING',
       `Input diblokir oleh Pre-LLM Safety (${safety.action}) pada ${chat.id}`,
-      { chatId: chat.id, action: safety.action }
+      { chatId: chat.id, action: safety.action, callerAccessLevel }
     );
     await deliverAndRecordAgentMessage({
       chatId: chat.id,
@@ -435,11 +631,6 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
     });
     return;
   }
-
-  // Verify caller identity strictly on backend using WAHA JID phone vs Contact phone
-  const callerAccessLevel = resolveCallerVerification(turn.senderPhone, [
-    chat.contact?.phone,
-  ]);
 
   // Gather recent conversation history (last 16 messages)
   const recentDbMessages = await prisma.message.findMany({
@@ -468,6 +659,11 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
     });
   }
 
+  const userInitiatedReligiousGreeting = hasUserInitiatedReligiousGreeting([
+    ...orderedMessages.filter((m) => !m.fromMe).map((m) => m.body),
+    turn.combinedText,
+  ]);
+
   // Build current user turn parts: dynamic context + wrapped untrusted text + multimodal screenshot/voice parts
   const dynamicContextText = buildDynamicTurnContext({
     agentName,
@@ -489,6 +685,7 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
         }
       : null,
     isRefundContext: safety.isRefundOrCancellation,
+    userInitiatedReligiousGreeting,
   });
 
   const currentParts: Part[] = [
@@ -535,8 +732,8 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
     chat.agentMode
   );
   const targetModel = usePro
-    ? agentConfig.fallbackProModel || 'gemini-4-argon'
-    : agentConfig.primaryModel || 'gemini-3.8-flash';
+    ? agentConfig.fallbackProModel || 'gemini-3.6-flash'
+    : agentConfig.primaryModel || 'gemini-3.6-flash';
   const targetThinkingLevel = usePro ? ThinkingLevel.MEDIUM : ThinkingLevel.LOW;
 
   const staticInstruction = buildStaticSystemInstruction(agentName);
@@ -582,6 +779,8 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
     const checked = validateAgentOutput(rawReply, {
       agentName,
       isRefundContext: safety.isRefundOrCancellation,
+      callerAccessLevel,
+      allowReligiousGreeting: userInitiatedReligiousGreeting,
     });
 
     if (!checked.safe) {

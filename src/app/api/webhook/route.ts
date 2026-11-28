@@ -61,16 +61,24 @@ export async function POST(req: NextRequest) {
       // Immediately normalize rawChatId from @s.whatsapp.net to canonical @c.us
       rawChatId = normalizeJid(rawChatId);
 
-      // Check if this rawChatId is a LID that can be resolved to phone via Baileys reverse mapping
+      // Check if this rawChatId is a LID that can be resolved to phone via payload remoteJidAlt or Baileys reverse mapping
       let resolvedPhone: string | null = null;
       if (isLid(rawChatId)) {
-        resolvedPhone = resolveLidToPhone(rawChatId);
+        const altJid = String(data._data?.key?.remoteJidAlt || data.key?.remoteJidAlt || '');
+        if (altJid && !isLid(altJid) && !altJid.endsWith('@g.us')) {
+          resolvedPhone = sanitizePhone(jidToPhone(altJid));
+        }
+        if (!resolvedPhone) {
+          resolvedPhone = resolveLidToPhone(rawChatId);
+        }
       }
 
-      const canonicalPhone = jidToPhone(rawChatId);
-      const canonicalJid = isLid(rawChatId)
+      const canonicalPhone = resolvedPhone
+        ? sanitizePhone(resolvedPhone)
+        : jidToPhone(rawChatId);
+      const canonicalJid = rawChatId.endsWith('@g.us')
         ? rawChatId
-        : rawChatId.endsWith('@g.us')
+        : isLid(rawChatId) && !resolvedPhone
         ? rawChatId
         : `${canonicalPhone}@c.us`;
 
@@ -87,15 +95,36 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // If mappedContact's stored jid ends with @s.whatsapp.net, heal it to canonicalJid
-      if (mappedContact && mappedContact.jid.endsWith('@s.whatsapp.net')) {
-        try {
-          mappedContact = await prisma.contact.update({
-            where: { id: mappedContact.id },
-            data: { jid: canonicalJid },
-          });
-        } catch (e) {
-          console.warn('[Webhook] Could not update contact JID from @s.whatsapp.net to @c.us:', e);
+      // Heal mappedContact.jid if it still ends with @s.whatsapp.net OR @lid when real phone is known
+      if (mappedContact) {
+        const rawLidDigits = mappedContact.jid.replace(/@lid$/, '');
+        const knownRealPhone =
+          resolvedPhone ||
+          (!isLid(rawChatId) ? canonicalPhone : null) ||
+          (mappedContact.phone && mappedContact.phone !== rawLidDigits
+            ? sanitizePhone(mappedContact.phone)
+            : null);
+
+        const desiredJid = knownRealPhone ? `${knownRealPhone}@c.us` : canonicalJid;
+        if (
+          (mappedContact.jid.endsWith('@s.whatsapp.net') ||
+            (mappedContact.jid.endsWith('@lid') && desiredJid.endsWith('@c.us'))) &&
+          mappedContact.jid !== desiredJid
+        ) {
+          try {
+            mappedContact = await prisma.contact.update({
+              where: { id: mappedContact.id },
+              data: {
+                jid: desiredJid,
+                phone: knownRealPhone || mappedContact.phone,
+                lid: isLid(rawChatId)
+                  ? rawChatId
+                  : mappedContact.lid || (mappedContact.jid.endsWith('@lid') ? mappedContact.jid : null),
+              },
+            });
+          } catch (e) {
+            console.warn('[Webhook] Could not canonicalize contact JID:', e);
+          }
         }
       }
 
@@ -280,10 +309,10 @@ export async function POST(req: NextRequest) {
           });
         } else {
           mappedContact = await prisma.contact.upsert({
-            where: { jid: canonicalJid },
+            where: { jid: chatId },
             create: {
               phone,
-              jid: canonicalJid,
+              jid: chatId,
               lid: isLid(rawChatId) ? rawChatId : null,
               pushName,
               name: defaultDisplayName,
@@ -315,12 +344,18 @@ export async function POST(req: NextRequest) {
       }
 
       // Step 1: Ensure Chat record exists first (so foreign key on Message is valid)
+      const wsSettings = await getWorkspaceSettings();
+      const initialAgentMode = chatId.endsWith('@g.us')
+        ? 'HUMAN_TAKEOVER'
+        : wsSettings.agentConfig.defaultChatAgentMode || 'AI_ACTIVE';
+
       await prisma.chat.upsert({
         where: { id: chatId },
         create: {
           id: chatId,
           name: mappedContact?.name || mappedContact?.pushName || defaultDisplayName,
           isGroup: chatId.endsWith('@g.us'),
+          agentMode: initialAgentMode,
           lastMessage: lastMsgSnippet,
           lastMessageAt: timestamp,
           unreadCount: 0,

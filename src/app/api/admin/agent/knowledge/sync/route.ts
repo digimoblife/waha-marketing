@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     totalActiveChunks: Number(vecAgg?.total || 0),
     vectorizedChunks: Number(vecAgg?.vectorized || 0),
-    geminiKeyConfigured: hasGeminiApiKey(),
+    geminiKeyConfigured: await hasGeminiApiKey(),
     bySourceType: grouped.map((g) => ({
       sourceType: g.sourceType,
       count: g._count._all,

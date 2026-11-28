@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --import ./tests/register-loader.mjs --test tests/*.test.ts",
+    "agent:eval": "node --import ./tests/register-loader.mjs --test tests/agent-*.test.ts",
     "db:push": "prisma db push && node scripts/setup-pgvector-indexes.mjs",
     "db:setup-vectors": "node scripts/setup-pgvector-indexes.mjs",
     "db:migrate-sqlite": "node scripts/migrate-sqlite-to-pg.mjs",

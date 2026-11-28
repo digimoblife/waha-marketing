@@ -19,6 +19,8 @@ import {
   ChevronDown,
   WifiOff,
   ExternalLink,
+  Bot,
+  UserCheck,
 } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
 import { interpolateTemplate } from '@/lib/template-utils';
@@ -40,6 +42,7 @@ interface InboxChatPanelProps {
   onChangeAssignee: (assigneeId: string) => Promise<void>;
   onChangeStatus: (status: string) => Promise<void>;
   onCompleteReminder: () => Promise<void>;
+  onChangeAgentMode?: (mode: 'AI_ACTIVE' | 'HUMAN_TAKEOVER') => Promise<void>;
   onSendMessage: (payload: {
     text?: string;
     replyTo?: string;
@@ -128,6 +131,7 @@ export default function InboxChatPanel({
   onChangeAssignee,
   onChangeStatus,
   onCompleteReminder,
+  onChangeAgentMode,
   onSendMessage,
 }: InboxChatPanelProps) {
   const [text, setText] = useState(() => {
@@ -379,6 +383,40 @@ export default function InboxChatPanel({
                   {storeName}
                 </span>
               )}
+              {(() => {
+                const mode = chatData?.agentMode || 'AI_ACTIVE';
+                const badgeMap: Record<string, { text: string; cls: string }> = {
+                  AI_ACTIVE: {
+                    text: 'AI Aktif',
+                    cls: 'bg-[#E7F8F1] border-[#A7E7CB] text-[#0D6945]',
+                  },
+                  STEP_BY_STEP: {
+                    text: 'Panduan AI',
+                    cls: 'bg-[#ECF6FA] border-[#A7D6E7] text-[#00688E]',
+                  },
+                  WAITING_TECH: {
+                    text: 'Menunggu Teknis',
+                    cls: 'bg-[#FDECEC] border-[#F7B4B6] text-[#9E1F23]',
+                  },
+                  HUMAN_TAKEOVER: {
+                    text: 'Diambil Alih',
+                    cls: 'bg-[#FEF5E4] border-[#F7D488] text-[#8F5A05]',
+                  },
+                };
+                const b = badgeMap[mode] || badgeMap.AI_ACTIVE;
+                return (
+                  <span
+                    className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10.5px] font-semibold shrink-0 ${b.cls}`}
+                  >
+                    {mode === 'HUMAN_TAKEOVER' ? (
+                      <UserCheck className="w-3 h-3" />
+                    ) : (
+                      <Bot className="w-3 h-3" />
+                    )}
+                    <span>{b.text}</span>
+                  </span>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-1.5 text-[11.5px] text-[#5C7685] truncate">
               <span className="font-mono tabular-nums">{displayPhone}</span>
@@ -392,8 +430,43 @@ export default function InboxChatPanel({
           </div>
         </div>
 
-        {/* Right Controls: PIC Assignee + Status + Inspector Toggle */}
+        {/* Right Controls: AI Mode Toggle + PIC Assignee + Status + Inspector Toggle */}
         <div className="flex items-center gap-1.5 w-full md:w-auto justify-between md:justify-end shrink-0">
+          {onChangeAgentMode && !chatData?.isGroup && (
+            <button
+              type="button"
+              onClick={() => {
+                const isManual =
+                  chatData?.agentMode === 'HUMAN_TAKEOVER' ||
+                  chatData?.agentMode === 'WAITING_TECH';
+                onChangeAgentMode(isManual ? 'AI_ACTIVE' : 'HUMAN_TAKEOVER');
+              }}
+              title={
+                chatData?.agentMode === 'HUMAN_TAKEOVER' || chatData?.agentMode === 'WAITING_TECH'
+                  ? 'Klik untuk menyalakan Agent AI pada chat ini'
+                  : 'Klik untuk mematikan Agent AI pada chat ini (dijawab manual)'
+              }
+              className={`h-7 px-2.5 border rounded-md inline-flex items-center gap-1.5 text-[11.5px] font-bold transition cursor-pointer shrink-0 ${
+                chatData?.agentMode === 'HUMAN_TAKEOVER' || chatData?.agentMode === 'WAITING_TECH'
+                  ? 'border-[#B0C4CF] bg-[#F4F8FA] hover:bg-[#E8EFF3] text-[#435A68]'
+                  : 'border-[#A7E7CB] bg-[#E7F8F1] hover:bg-[#D5F3E6] text-[#0D6945]'
+              }`}
+            >
+              {chatData?.agentMode === 'HUMAN_TAKEOVER' ||
+              chatData?.agentMode === 'WAITING_TECH' ? (
+                <>
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>AI: OFF</span>
+                </>
+              ) : (
+                <>
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>AI: ON</span>
+                </>
+              )}
+            </button>
+          )}
+
           <Select
             value={chatData?.assigneeId || ''}
             onChange={(v) => onChangeAssignee(v)}
@@ -658,6 +731,12 @@ export default function InboxChatPanel({
 
                   {/* Timestamp & ACK */}
                   <div className="flex items-center gap-1 mt-1 text-[10.5px] text-[#809AA8] tabular-nums">
+                    {m.fromMe && m.isAiGenerated && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-[0.5px] rounded bg-[#ECF6FA] border border-[#A7D6E7] text-[#00688E] font-semibold text-[10px] mr-0.5">
+                        <Bot className="w-2.5 h-2.5" />
+                        <span>Agent AI</span>
+                      </span>
+                    )}
                     <span>
                       {msgDate.toLocaleTimeString('id-ID', {
                         hour: '2-digit',

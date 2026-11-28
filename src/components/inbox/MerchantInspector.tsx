@@ -11,6 +11,8 @@ import {
   Loader2,
   Plus,
   Copy,
+  Bot,
+  UserCheck,
 } from 'lucide-react';
 import { formatDisplayPhone, isLid } from '@/lib/phone';
 import { formatAccountDate } from '@/lib/date';
@@ -28,6 +30,7 @@ interface MerchantInspectorProps {
   onCloseDesktop: () => void;
   onOpenReminderModal: () => void;
   onCompleteReminder: () => Promise<void>;
+  onChangeAgentMode?: (mode: 'AI_ACTIVE' | 'HUMAN_TAKEOVER') => Promise<void>;
   onContactUpdated: (updatedContact?: any) => void;
   onMergeSuccess: (targetJid: string) => void;
   onClearChat: (mode: 'clear_messages' | 'delete_chat') => void;
@@ -44,6 +47,7 @@ export default function MerchantInspector({
   onCloseDesktop,
   onOpenReminderModal,
   onCompleteReminder,
+  onChangeAgentMode,
   onContactUpdated,
   onMergeSuccess,
   onClearChat,
@@ -303,6 +307,61 @@ export default function MerchantInspector({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* 0. Kontrol AI untuk Chat Ini */}
+          {!chatData?.isGroup && onChangeAgentMode && (
+            <div className="pb-4 border-b border-[#E8EFF3] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#5C7685]">
+                  Agentic CS pada Chat Ini
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                    chatData?.agentMode === 'HUMAN_TAKEOVER' || chatData?.agentMode === 'WAITING_TECH'
+                      ? 'bg-[#F4F8FA] text-[#5C7685] border-[#B0C4CF]'
+                      : 'bg-[#E7F8F1] text-[#0D6945] border-[#A7E7CB]'
+                  }`}
+                >
+                  {chatData?.agentMode === 'HUMAN_TAKEOVER'
+                    ? 'Nonaktif (Manual)'
+                    : chatData?.agentMode === 'WAITING_TECH'
+                    ? 'Menunggu Teknis'
+                    : 'AI Aktif'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onChangeAgentMode('AI_ACTIVE')}
+                  className={`h-8 px-2 rounded-md border text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                    (chatData?.agentMode || 'AI_ACTIVE') === 'AI_ACTIVE' ||
+                    chatData?.agentMode === 'STEP_BY_STEP'
+                      ? 'bg-[#00688E] border-[#00688E] text-white'
+                      : 'bg-white border-[#B0C4CF] text-[#435A68] hover:bg-[#ECF6FA]'
+                  }`}
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>Pakai AI</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeAgentMode('HUMAN_TAKEOVER')}
+                  className={`h-8 px-2 rounded-md border text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                    chatData?.agentMode === 'HUMAN_TAKEOVER' || chatData?.agentMode === 'WAITING_TECH'
+                      ? 'bg-[#0F232E] border-[#0F232E] text-white'
+                      : 'bg-white border-[#B0C4CF] text-[#435A68] hover:bg-[#F4F8FA]'
+                  }`}
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Tanpa AI</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-[#809AA8] leading-snug">
+                Pilih apakah obrolan nomor ini dijawab otomatis oleh Agent AI atau khusus manual oleh operator.
+              </p>
+            </div>
+          )}
+
           {/* 1. Pengingat Operator */}
           <div className="pb-4 border-b border-[#E8EFF3] space-y-2.5">
             <div className="flex items-center justify-between">

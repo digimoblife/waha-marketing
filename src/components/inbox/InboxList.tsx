@@ -1,16 +1,18 @@
 'use client';
 
 import React from 'react';
-import { Search, Plus, Clock, MessageSquare } from 'lucide-react';
+import { Search, Plus, Clock, MessageSquare, Bot, UserCheck } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
 import Select from '@/components/ui/Select';
 
-export type QuickFilter = 'all' | 'unread' | 'mine' | 'reminder';
+export type QuickFilter = 'all' | 'unread' | 'ai_on' | 'ai_off' | 'waiting_tech' | 'mine' | 'reminder';
 
 interface InboxListProps {
   chats: any[];
   selectedChatId: string | null;
   onSelectChat: (chatId: string) => void;
+  onToggleChatAi?: (chatId: string, nextMode: 'AI_ACTIVE' | 'HUMAN_TAKEOVER') => void;
+  onBulkSetChatAi?: (nextMode: 'AI_ACTIVE' | 'HUMAN_TAKEOVER', chatIds: string[]) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   statusFilter: string;
@@ -18,6 +20,9 @@ interface InboxListProps {
   quickFilter: QuickFilter;
   setQuickFilter: (f: QuickFilter) => void;
   currentUserId?: string;
+  botSwitch?: 'OFF' | 'ON_ALWAYS' | 'ON_OUTSIDE_HOURS';
+  isAdmin?: boolean;
+  onEnableMasterBot?: () => void;
   onOpenNewChat: () => void;
 }
 
@@ -36,6 +41,26 @@ const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   },
 };
 
+const AGENT_MODE_BADGE: Record<string, { label: string; cls: string; isHuman?: boolean }> = {
+  AI_ACTIVE: {
+    label: 'AI',
+    cls: 'bg-[#E7F8F1] text-[#0D6945] border-[#A7E7CB]',
+  },
+  STEP_BY_STEP: {
+    label: 'Panduan AI',
+    cls: 'bg-[#ECF6FA] text-[#00688E] border-[#A7D6E7]',
+  },
+  WAITING_TECH: {
+    label: 'Eskalasi',
+    cls: 'bg-[#FDECEC] text-[#9E1F23] border-[#F7B4B6]',
+  },
+  HUMAN_TAKEOVER: {
+    label: 'Manual',
+    cls: 'bg-[#FEF5E4] text-[#8F5A05] border-[#F7D488]',
+    isHuman: true,
+  },
+};
+
 function formatChatTime(dateStr?: string | null) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -51,6 +76,8 @@ export default function InboxList({
   chats,
   selectedChatId,
   onSelectChat,
+  onToggleChatAi,
+  onBulkSetChatAi,
   searchQuery,
   setSearchQuery,
   statusFilter,
@@ -58,8 +85,14 @@ export default function InboxList({
   quickFilter,
   setQuickFilter,
   currentUserId,
+  botSwitch = 'OFF',
+  isAdmin = false,
+  onEnableMasterBot,
   onOpenNewChat,
 }: InboxListProps) {
+  const isAiEnabledMode = (mode?: string) =>
+    (mode || 'AI_ACTIVE') === 'AI_ACTIVE' || mode === 'STEP_BY_STEP';
+
   const filtered = chats.filter((c) => {
     const q = searchQuery.trim().toLowerCase();
     const name = (c.contact?.name || c.name || c.id || '').toLowerCase();
@@ -74,10 +107,15 @@ export default function InboxList({
       return false;
     }
     if (quickFilter === 'unread' && !(c.unreadCount > 0)) return false;
+    if (quickFilter === 'ai_on' && (c.isGroup || !isAiEnabledMode(c.agentMode))) return false;
+    if (quickFilter === 'ai_off' && (c.isGroup || isAiEnabledMode(c.agentMode))) return false;
     if (quickFilter === 'mine' && (!currentUserId || c.assigneeId !== currentUserId)) return false;
     if (quickFilter === 'reminder' && !c.reminderAt) return false;
+    if (quickFilter === 'waiting_tech' && c.agentMode !== 'WAITING_TECH') return false;
     return true;
   });
+
+  const nonGroupFilteredIds = filtered.filter((c) => !c.isGroup).map((c) => c.id);
 
   return (
     <div className="w-full md:w-[324px] shrink-0 border-r border-[#D1DEE5] flex flex-col bg-white h-full">
@@ -99,6 +137,24 @@ export default function InboxList({
           <span>Chat Baru</span>
         </button>
       </div>
+
+      {/* Master Switch OFF Warning Banner */}
+      {botSwitch === 'OFF' && (
+        <div className="px-3 py-2 bg-[#FEF5E4] border-b border-[#F7D488] flex items-center justify-between gap-2 text-[11px] text-[#8F5A05] shrink-0">
+          <span className="font-medium leading-snug">
+            <strong>Saklar Utama AI masih OFF.</strong> Nyalakan agar chat bertanda AI ON dijawab otomatis.
+          </span>
+          {isAdmin && onEnableMasterBot && (
+            <button
+              type="button"
+              onClick={onEnableMasterBot}
+              className="px-2 py-1 rounded bg-[#00688E] hover:bg-[#005575] text-white font-bold text-[10.5px] shrink-0 cursor-pointer"
+            >
+              Nyalakan AI
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Controls: Search + Status Filter + Quick Pills */}
       <div className="p-2.5 border-b border-[#E8EFF3] space-y-2 shrink-0">
@@ -132,6 +188,9 @@ export default function InboxList({
             [
               { key: 'all', label: 'Semua' },
               { key: 'unread', label: 'Belum Dibaca' },
+              { key: 'ai_on', label: 'AI: ON' },
+              { key: 'ai_off', label: 'AI: OFF' },
+              { key: 'waiting_tech', label: 'Eskalasi' },
               { key: 'mine', label: 'Milik Saya' },
               { key: 'reminder', label: 'Pengingat' },
             ] as const
@@ -150,6 +209,31 @@ export default function InboxList({
             </button>
           ))}
         </div>
+
+        {/* Bulk AI Selector Bar */}
+        {onBulkSetChatAi && nonGroupFilteredIds.length > 0 && (
+          <div className="pt-1.5 border-t border-[#E8EFF3] flex items-center justify-between gap-1.5 text-[11px]">
+            <span className="text-[#5C7685] font-medium truncate">
+              Atur AI ({nonGroupFilteredIds.length} chat):
+            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => onBulkSetChatAi('AI_ACTIVE', nonGroupFilteredIds)}
+                className="px-2 py-0.5 rounded border border-[#A7E7CB] bg-[#E7F8F1] hover:bg-[#D5F3E6] text-[#0D6945] font-semibold cursor-pointer"
+              >
+                Semua AI ON
+              </button>
+              <button
+                type="button"
+                onClick={() => onBulkSetChatAi('HUMAN_TAKEOVER', nonGroupFilteredIds)}
+                className="px-2 py-0.5 rounded border border-[#D1DEE5] bg-[#F4F8FA] hover:bg-[#E8EFF3] text-[#435A68] font-semibold cursor-pointer"
+              >
+                Semua AI OFF
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Chat List */}
@@ -179,6 +263,7 @@ export default function InboxList({
               .slice(0, 2)
               .toUpperCase();
             const st = STATUS_BADGE[c.status || 'OPEN'] || STATUS_BADGE.OPEN;
+            const ag = AGENT_MODE_BADGE[c.agentMode || 'AI_ACTIVE'] || AGENT_MODE_BADGE.AI_ACTIVE;
             const picName = c.assignee?.name ? c.assignee.name.split(/\s+/)[0] : '—';
             const isReminderDue =
               c.reminderAt && new Date(c.reminderAt).getTime() <= Date.now();
@@ -225,6 +310,57 @@ export default function InboxList({
                       {storeName || (c.contact?.phone ? formatDisplayPhone(c.contact.phone) : c.id)}
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
+                      {!c.isGroup && onToggleChatAi ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const currentlyOn = isAiEnabledMode(c.agentMode);
+                            onToggleChatAi(c.id, currentlyOn ? 'HUMAN_TAKEOVER' : 'AI_ACTIVE');
+                          }}
+                          title={
+                            isAiEnabledMode(c.agentMode)
+                              ? 'AI Aktif pada chat ini — klik untuk mematikan AI (Manual)'
+                              : 'AI Nonaktif pada chat ini — klik untuk menyalakan AI'
+                          }
+                          className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-[1.5px] rounded border transition cursor-pointer ${
+                            isAiEnabledMode(c.agentMode)
+                              ? 'bg-[#E7F8F1] text-[#0D6945] border-[#A7E7CB] hover:bg-[#D5F3E6]'
+                              : c.agentMode === 'WAITING_TECH'
+                              ? 'bg-[#FDECEC] text-[#9E1F23] border-[#F7B4B6] hover:bg-[#FADADA]'
+                              : 'bg-[#F4F8FA] text-[#5C7685] border-[#B0C4CF] hover:bg-[#E8EFF3]'
+                          }`}
+                        >
+                          {isAiEnabledMode(c.agentMode) ? (
+                            <>
+                              <Bot className="w-2.5 h-2.5" />
+                              <span>AI ON</span>
+                            </>
+                          ) : c.agentMode === 'WAITING_TECH' ? (
+                            <>
+                              <Bot className="w-2.5 h-2.5" />
+                              <span>Eskalasi</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="w-2.5 h-2.5" />
+                              <span>AI OFF</span>
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <span
+                          title={`Mode AI: ${c.agentMode || 'AI_ACTIVE'}`}
+                          className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-[1px] rounded border ${ag.cls}`}
+                        >
+                          {ag.isHuman ? (
+                            <UserCheck className="w-2.5 h-2.5" />
+                          ) : (
+                            <Bot className="w-2.5 h-2.5" />
+                          )}
+                          <span>{ag.label}</span>
+                        </span>
+                      )}
                       <span
                         className={`text-[10px] font-semibold px-1.5 py-[1px] rounded border ${st.cls}`}
                       >

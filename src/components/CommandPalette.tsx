@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MessageSquare, Store, Send, FileText, LayoutDashboard, Activity, Users, Settings, QrCode } from 'lucide-react';
+import { Search, MessageSquare, Store, Send, FileText, LayoutDashboard, Activity, Users, Settings, QrCode, LifeBuoy, Bot } from 'lucide-react';
 import { useWorkspace } from './WorkspaceContext';
 
 interface CommandPaletteProps {
@@ -12,7 +12,7 @@ interface CommandPaletteProps {
 
 export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const router = useRouter();
-  const { currentUser, openQRModal } = useWorkspace();
+  const { currentUser, openQRModal, updateBotSwitch } = useWorkspace();
   const [query, setQuery] = useState('');
   const [contacts, setContacts] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,11 +42,15 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
   const navActions = [
     { label: 'Buka Inbox & Chat', hint: 'Halaman', icon: MessageSquare, run: () => router.push('/inbox') },
+    { label: 'Buka Tiket Eskalasi & Memori Kasus', hint: 'CS Agent', icon: LifeBuoy, run: () => router.push('/issues') },
     { label: 'Buka Database Merchant', hint: 'Halaman', icon: Store, run: () => router.push('/merchants') },
     { label: 'Buka Broadcast & Campaign', hint: 'Marketing', icon: Send, run: () => router.push('/broadcast') },
     { label: 'Buka Template Pesan', hint: 'Marketing', icon: FileText, run: () => router.push('/templates') },
     ...(isAdmin
       ? [
+          { label: 'Buka Pengaturan Agentic CS & Pengetahuan', hint: 'AI Studio', icon: Bot, run: () => router.push('/settings?tab=agent') },
+          { label: 'Aktifkan Bot Agentic CS (ON Penuh)', hint: 'Saklar AI', icon: Bot, run: () => updateBotSwitch('ON_ALWAYS') },
+          { label: 'Matikan Bot Agentic CS (OFF Manual)', hint: 'Saklar AI', icon: Bot, run: () => updateBotSwitch('OFF') },
           { label: 'Buka Overview Admin', hint: 'Admin', icon: LayoutDashboard, run: () => router.push('/overview') },
           { label: 'Buka Log Aktivitas', hint: 'Admin', icon: Activity, run: () => router.push('/logs') },
           { label: 'Buka Manajemen Tim', hint: 'Admin', icon: Users, run: () => router.push('/users') },

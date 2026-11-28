@@ -13,7 +13,15 @@ import ImportContactModal from '@/components/ImportContactModal';
 
 function InboxWorkspaceInner() {
   const searchParams = useSearchParams();
-  const { currentUser, sessionStatus, openQRModal, refreshWorkspaceMeta, notify } = useWorkspace();
+  const {
+    currentUser,
+    sessionStatus,
+    botSwitch,
+    updateBotSwitch,
+    openQRModal,
+    refreshWorkspaceMeta,
+    notify,
+  } = useWorkspace();
 
   const [chats, setChats] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -66,6 +74,7 @@ function InboxWorkspaceInner() {
             c.lastMessage,
             c.unreadCount,
             c.status,
+            c.agentMode,
             c.assigneeId,
             c.reminderAt,
             c.reminderNote,
@@ -132,9 +141,11 @@ function InboxWorkspaceInner() {
 
       if (data.messages) {
         setMessages((prev) => {
-          const prevKey = prev.map((m) => `${m.id}:${m.ackStatus}:${m.mediaUrl || ''}`).join('|');
+          const prevKey = prev
+            .map((m) => `${m.id}:${m.ackStatus}:${m.mediaUrl || ''}:${m.isAiGenerated ? 1 : 0}`)
+            .join('|');
           const nextKey = data.messages
-            .map((m: any) => `${m.id}:${m.ackStatus}:${m.mediaUrl || ''}`)
+            .map((m: any) => `${m.id}:${m.ackStatus}:${m.mediaUrl || ''}:${m.isAiGenerated ? 1 : 0}`)
             .join('|');
           return prevKey === nextKey ? prev : data.messages;
         });
@@ -206,25 +217,57 @@ function InboxWorkspaceInner() {
     }
   }, [jidParam, phoneParam, handleSelectChat]);
 
-  const patchChatMeta = async (payload: Record<string, any>, toastText?: string) => {
-    if (!selectedChatId) return;
+  const patchChatMeta = async (
+    payload: Record<string, any>,
+    toastText?: string,
+    targetChatId?: string
+  ) => {
+    const cid = targetChatId || selectedChatId;
+    if (!cid) return;
     try {
       const res = await fetch('/api/chats', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chatId: selectedChatId, ...payload }),
+        body: JSON.stringify({ chatId: cid, ...payload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal memperbarui chat');
       if (data.chat) {
         setChats((prev) =>
-          prev.map((c) => (c.id === selectedChatId ? { ...c, ...data.chat } : c))
+          prev.map((c) => (c.id === cid ? { ...c, ...data.chat } : c))
         );
       }
       refreshWorkspaceMeta();
       if (toastText) notify(toastText);
     } catch (err: any) {
       notify(err.message || 'Gagal memperbarui');
+    }
+  };
+
+  const handleBulkSetChatAi = async (
+    nextMode: 'AI_ACTIVE' | 'HUMAN_TAKEOVER',
+    chatIds: string[]
+  ) => {
+    if (chatIds.length === 0) return;
+    try {
+      const res = await fetch('/api/chats', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bulkAgentMode: nextMode, chatIds }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal mengubah mode AI massal');
+      const idSet = new Set(chatIds);
+      setChats((prev) =>
+        prev.map((c) => (idSet.has(c.id) ? { ...c, agentMode: nextMode } : c))
+      );
+      notify(
+        nextMode === 'AI_ACTIVE'
+          ? `AI dinyalakan pada ${data.updatedCount ?? chatIds.length} obrolan`
+          : `AI dimatikan (Manual) pada ${data.updatedCount ?? chatIds.length} obrolan`
+      );
+    } catch (err: any) {
+      notify(err.message || 'Gagal mengubah mode AI massal');
     }
   };
 
@@ -275,6 +318,10 @@ function InboxWorkspaceInner() {
       });
       return exists ? prev : [...prev, data.message];
     });
+    // Manual operator reply automatically switches chat to HUMAN_TAKEOVER
+    setChats((prev) =>
+      prev.map((c) => (c.id === selectedChatId ? { ...c, agentMode: 'HUMAN_TAKEOVER' } : c))
+    );
     fetchChats();
   };
 
@@ -297,6 +344,16 @@ function InboxWorkspaceInner() {
           chats={chats}
           selectedChatId={selectedChatId}
           onSelectChat={handleSelectChat}
+          onToggleChatAi={(cid, nextMode) => {
+            void patchChatMeta(
+              { agentMode: nextMode },
+              nextMode === 'AI_ACTIVE'
+                ? 'Agent AI dinyalakan untuk obrolan ini'
+                : 'Agent AI dimatikan (Manual) untuk obrolan ini',
+              cid
+            );
+          }}
+          onBulkSetChatAi={handleBulkSetChatAi}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           statusFilter={statusFilter}
@@ -304,6 +361,9 @@ function InboxWorkspaceInner() {
           quickFilter={quickFilter}
           setQuickFilter={setQuickFilter}
           currentUserId={currentUser?.id}
+          botSwitch={botSwitch}
+          isAdmin={currentUser?.role === 'ADMIN'}
+          onEnableMasterBot={() => void updateBotSwitch('ON_ALWAYS')}
           onOpenNewChat={() => setIsNewChatOpen(true)}
         />
       </div>
@@ -348,6 +408,14 @@ function InboxWorkspaceInner() {
               onCompleteReminder={async () => {
                 await patchChatMeta({ clearReminder: true }, 'Pengingat follow-up ditandai selesai');
               }}
+              onChangeAgentMode={async (nextMode) => {
+                await patchChatMeta(
+                  { agentMode: nextMode },
+                  nextMode === 'HUMAN_TAKEOVER'
+                    ? 'Obrolan diambil alih manual oleh Operator'
+                    : 'Agentic CS diaktifkan kembali untuk obrolan ini'
+                );
+              }}
               onSendMessage={handleSendMessage}
             />
 
@@ -363,6 +431,14 @@ function InboxWorkspaceInner() {
               onOpenReminderModal={() => setIsReminderOpen(true)}
               onCompleteReminder={async () => {
                 await patchChatMeta({ clearReminder: true }, 'Pengingat follow-up ditandai selesai');
+              }}
+              onChangeAgentMode={async (nextMode) => {
+                await patchChatMeta(
+                  { agentMode: nextMode },
+                  nextMode === 'HUMAN_TAKEOVER'
+                    ? 'Agent AI dimatikan untuk obrolan ini (Mode Manual)'
+                    : 'Agent AI dinyalakan untuk obrolan ini'
+                );
               }}
               onContactUpdated={(updatedContact) => {
                 if (updatedContact) {

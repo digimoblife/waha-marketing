@@ -1,23 +1,26 @@
 import { GoogleGenAI } from '@google/genai';
 import { getWorkspaceSettings } from '@/lib/settings';
+import { getEffectiveGeminiApiKey } from './secrets';
 
 export const VECTOR_DIMENSIONS = 768;
 
 let cachedClient: { key: string; ai: GoogleGenAI } | null = null;
 
-export function getGeminiClient(): GoogleGenAI | null {
-  const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+export async function getGeminiClient(overrideKey?: string): Promise<GoogleGenAI | null> {
+  const apiKey = (overrideKey ?? (await getEffectiveGeminiApiKey())).trim();
   if (!apiKey) return null;
-  if (cachedClient && cachedClient.key === apiKey) {
+  if (!overrideKey && cachedClient && cachedClient.key === apiKey) {
     return cachedClient.ai;
   }
   const ai = new GoogleGenAI({ apiKey });
-  cachedClient = { key: apiKey, ai };
+  if (!overrideKey) {
+    cachedClient = { key: apiKey, ai };
+  }
   return ai;
 }
 
-export function hasGeminiApiKey(): boolean {
-  return Boolean((process.env.GEMINI_API_KEY || '').trim());
+export async function hasGeminiApiKey(): Promise<boolean> {
+  return Boolean(await getEffectiveGeminiApiKey());
 }
 
 /**
@@ -25,8 +28,11 @@ export function hasGeminiApiKey(): boolean {
  * (Matryoshka Representation Learning scaled to 768 dimensions for fast HNSW cosine indexing).
  * Returns null gracefully when GEMINI_API_KEY is not configured yet.
  */
-export async function embedText768(text: string): Promise<number[] | null> {
-  const ai = getGeminiClient();
+export async function embedText768(
+  text: string,
+  overrideKey?: string
+): Promise<number[] | null> {
+  const ai = await getGeminiClient(overrideKey);
   if (!ai) return null;
 
   const trimmed = text.trim();

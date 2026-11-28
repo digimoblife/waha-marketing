@@ -12,10 +12,13 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
+import { formatDisplayPhone } from '@/lib/phone';
+
 interface QRModalProps {
   isOpen: boolean;
   onClose: () => void;
   status: string;
+  sessionMe?: { id: string; pushName?: string } | null;
   onRefresh: () => void;
   onStartSession: () => void;
   onLogout?: (resetDb: boolean) => Promise<void>;
@@ -25,6 +28,7 @@ export default function QRModal({
   isOpen,
   onClose,
   status,
+  sessionMe,
   onRefresh,
   onStartSession,
   onLogout,
@@ -178,8 +182,18 @@ export default function QRModal({
                 <CheckCircle2 className="w-11 h-11 text-[#0D6945] mx-auto" />
                 <div>
                   <h4 className="text-sm font-bold text-[#0F232E]">WhatsApp Terhubung</h4>
-                  <p className="text-xs text-[#5C7685] mt-1">
-                    Engine aktif menerima webhook dan siap mengirim pesan maupun broadcast.
+                  {sessionMe?.id && (
+                    <div className="mt-1.5 inline-flex flex-col items-center px-3 py-1.5 rounded-md bg-[#ECF6FA] border border-[#A7D6E7]">
+                      <span className="text-xs font-bold text-[#0F232E]">
+                        {sessionMe.pushName || 'Akun Utama WAHA'}
+                      </span>
+                      <span className="text-[11.5px] font-mono font-semibold text-[#00688E]">
+                        {formatDisplayPhone(sessionMe.id.replace(/@.+$/, ''))}
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-xs text-[#5C7685] mt-2">
+                    Nomor di atas adalah nomor CS WAHA saat ini. Untuk mengetes AI, kirim pesan dari nomor lain menuju nomor di atas.
                   </p>
                 </div>
                 <div className="pt-2 flex flex-col gap-2">

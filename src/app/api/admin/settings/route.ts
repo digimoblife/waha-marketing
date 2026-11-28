@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceSettings, saveWorkspaceSettings } from '@/lib/settings';
+import { saveAgentSecrets } from '@/lib/agent/secrets';
 import { createLog } from '@/lib/logger';
 import { getRequestUser } from '@/lib/session-user';
 
@@ -17,6 +18,18 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
+    if (body.geminiApiKey !== undefined || body.internalCsApiKey !== undefined) {
+      await saveAgentSecrets({
+        geminiApiKey:
+          typeof body.geminiApiKey === 'string' && body.geminiApiKey.trim()
+            ? body.geminiApiKey.trim()
+            : undefined,
+        internalCsApiKey:
+          typeof body.internalCsApiKey === 'string' && body.internalCsApiKey.trim()
+            ? body.internalCsApiKey.trim()
+            : undefined,
+      });
+    }
     const updated = await saveWorkspaceSettings(body);
     const user = await getRequestUser(req);
 

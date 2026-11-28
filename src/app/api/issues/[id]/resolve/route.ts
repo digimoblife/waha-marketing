@@ -99,7 +99,7 @@ export async function POST(
       });
       promotedCaseMemoryId = savedMem.id;
 
-      if (hasGeminiApiKey()) {
+      if (await hasGeminiApiKey()) {
         try {
           const vec = await embedText768(
             `${savedMem.title}\nGejala: ${savedMem.symptomPattern}\nSolusi: ${savedMem.verifiedSolution}`

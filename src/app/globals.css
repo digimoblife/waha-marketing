@@ -54,3 +54,125 @@ body {
 .wa-chat-bg {
   background-color: #F4F8FA;
 }
+
+/* Native Modal Dialog Scroll Containment & Backdrop */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(15, 35, 46, 0.48);
+  backdrop-filter: blur(2px);
+}
+
+/* Brand-Consistent Accessible Form Controls */
+input[type="checkbox"] {
+  accent-color: var(--accent, #00688E);
+}
+
+/* Container-Query Responsive Escalation Table */
+.issues-table-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(640px, 74vh);
+  container-type: inline-size;
+}
+
+.issues-table-wrapper table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  --label-2: "Kategori";
+  --label-3: "Merchant / Toko";
+  --label-4: "Ringkasan Kendala";
+  --label-5: "Status & Memori";
+  --label-6: "Tindakan";
+}
+
+.issues-table-wrapper thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+}
+
+.issues-table-wrapper tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: #FFFFFF;
+}
+
+@container (width < 720px) {
+  .issues-table-wrapper table,
+  .issues-table-wrapper thead,
+  .issues-table-wrapper tbody,
+  .issues-table-wrapper tr,
+  .issues-table-wrapper th,
+  .issues-table-wrapper td {
+    display: block;
+  }
+
+  .issues-table-wrapper thead {
+    display: none;
+  }
+
+  .issues-table-wrapper tbody tr {
+    margin-block-end: 0.85rem;
+    border: 1px solid var(--border, #D1DEE5);
+    border-radius: 0.5rem;
+    background: #FFFFFF;
+    overflow: hidden;
+  }
+
+  .issues-table-wrapper tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: #F4F8FA;
+    border-block-end: 1px solid #E8EFF3;
+  }
+
+  .issues-table-wrapper td:nth-child(2)::before {
+    content: var(--label-2) ": ";
+    font-weight: 600;
+    color: #5C7685;
+    font-size: 11px;
+  }
+
+  .issues-table-wrapper td:nth-child(3)::before {
+    content: var(--label-3) ": ";
+    font-weight: 600;
+    color: #5C7685;
+    font-size: 11px;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .issues-table-wrapper td:nth-child(4)::before {
+    content: var(--label-4) ": ";
+    font-weight: 600;
+    color: #5C7685;
+    font-size: 11px;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .issues-table-wrapper td:nth-child(5)::before {
+    content: var(--label-5) ": ";
+    font-weight: 600;
+    color: #5C7685;
+    font-size: 11px;
+    margin-right: 6px;
+  }
+
+  .issues-table-wrapper td:nth-child(6)::before {
+    content: var(--label-6) ": ";
+    font-weight: 600;
+    color: #5C7685;
+    font-size: 11px;
+    display: block;
+    margin-bottom: 4px;
+  }
+}

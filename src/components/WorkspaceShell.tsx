@@ -18,13 +18,17 @@ import {
   ChevronRight,
   Menu,
   X,
+  Bot,
+  LifeBuoy,
 } from 'lucide-react';
-import { WorkspaceProvider, useWorkspace } from './WorkspaceContext';
+import { formatDisplayPhone } from '@/lib/phone';
+import { WorkspaceProvider, useWorkspace, type BotSwitchState } from './WorkspaceContext';
 import QRModal from './QRModal';
 import CommandPalette from './CommandPalette';
 
 const PAGE_TITLES: Record<string, string> = {
   '/inbox': 'Inbox & Chat',
+  '/issues': 'Tiket Eskalasi & Memori Kasus',
   '/merchants': 'Database Merchant',
   '/broadcast': 'Broadcast & Campaign',
   '/templates': 'Template Pesan',
@@ -51,12 +55,25 @@ function ShellInner({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, sessionStatus, unreadCount, reminders, refreshSession, refreshWorkspaceMeta, notify } =
-    useWorkspace();
+  const {
+    currentUser,
+    sessionStatus,
+    sessionMe,
+    unreadCount,
+    openIssuesCount,
+    botSwitch,
+    agentName,
+    reminders,
+    refreshSession,
+    refreshWorkspaceMeta,
+    updateBotSwitch,
+    notify,
+  } = useWorkspace();
 
   const [expanded, setExpanded] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [botPopoverOpen, setBotPopoverOpen] = useState(false);
 
   const isAdmin = currentUser?.role === 'ADMIN';
 
@@ -116,6 +133,7 @@ function ShellInner({
 
   const coreNav = [
     { href: '/inbox', label: 'Inbox & Chat', icon: MessageSquare, badge: unreadCount },
+    { href: '/issues', label: 'Tiket Eskalasi', icon: LifeBuoy, badge: openIssuesCount },
     { href: '/merchants', label: 'Database Merchant', icon: Store },
     { href: '/broadcast', label: 'Broadcast', icon: Send },
     { href: '/templates', label: 'Template Pesan', icon: FileText },
@@ -343,6 +361,58 @@ function ShellInner({
             )}
           </button>
 
+          {/* Global Bot Master Switch Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!isAdmin) {
+                notify(`Status Agent (${agentName}): ${botSwitch} — hanya Admin yang dapat mengubah saklar utama`);
+                return;
+              }
+              setBotPopoverOpen((prev) => !prev);
+              setNotifOpen(false);
+            }}
+            title={`Agentic CS (${agentName}): ${
+              botSwitch === 'ON_ALWAYS'
+                ? 'ON Penuh'
+                : botSwitch === 'ON_OUTSIDE_HOURS'
+                ? 'Luar Jam Kerja'
+                : 'OFF'
+            }`}
+            className={`relative flex items-center rounded-lg border transition cursor-pointer ${
+              botSwitch === 'ON_ALWAYS'
+                ? 'bg-[#E7F8F1] border-[#A7E7CB] text-[#0D6945]'
+                : botSwitch === 'ON_OUTSIDE_HOURS'
+                ? 'bg-[#FEF5E4] border-[#F7D488] text-[#8F5A05]'
+                : 'bg-white border-[#D1DEE5] hover:border-[#B0C4CF] text-[#5C7685]'
+            } ${
+              expanded || mobileNavOpen
+                ? 'w-full h-9 px-2.5 gap-2 justify-start'
+                : 'w-10 h-10 mx-auto justify-center'
+            }`}
+          >
+            <Bot className="w-[17px] h-[17px] shrink-0" strokeWidth={1.9} />
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                botSwitch === 'ON_ALWAYS'
+                  ? 'bg-[#16A34A]'
+                  : botSwitch === 'ON_OUTSIDE_HOURS'
+                  ? 'bg-[#D97706]'
+                  : 'bg-[#94A3B8]'
+              } ${expanded || mobileNavOpen ? '' : 'absolute -top-0.5 -right-0.5 border border-[#F4F8FA]'}`}
+            />
+            {(expanded || mobileNavOpen) && (
+              <span className="text-[11.5px] font-semibold truncate">
+                AI {agentName}:{' '}
+                {botSwitch === 'ON_ALWAYS'
+                  ? 'ON'
+                  : botSwitch === 'ON_OUTSIDE_HOURS'
+                  ? 'Luar Jam'
+                  : 'OFF'}
+              </span>
+            )}
+          </button>
+
           {/* WAHA Live Status Button */}
           <button
             type="button"
@@ -350,15 +420,23 @@ function ShellInner({
               setMobileNavOpen(false);
               setIsQROpen(true);
             }}
-            title={`WAHA Engine: ${sessionStatus}`}
+            title={
+              sessionMe?.id
+                ? `WAHA Terhubung: ${sessionMe.pushName || ''} (${formatDisplayPhone(
+                    sessionMe.id.replace(/@.+$/, '')
+                  )})`
+                : `WAHA Engine: ${sessionStatus}`
+            }
             className={`flex items-center rounded-lg bg-white border border-[#D1DEE5] hover:border-[#B0C4CF] transition cursor-pointer ${
               expanded || mobileNavOpen ? 'w-full h-9 px-2.5 gap-2.5 justify-start' : 'w-10 h-10 mx-auto justify-center'
             }`}
           >
             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusColor}`} />
             {(expanded || mobileNavOpen) && (
-              <span className={`text-[11.5px] font-semibold truncate ${statusTextColor}`}>
-                WAHA: {sessionStatus}
+              <span className={`text-[11px] font-semibold truncate ${statusTextColor}`}>
+                {sessionMe?.id
+                  ? `WA: ${formatDisplayPhone(sessionMe.id.replace(/@.+$/, ''))}`
+                  : `WAHA: ${sessionStatus}`}
               </span>
             )}
           </button>
@@ -401,6 +479,105 @@ function ShellInner({
           </div>
         </div>
       </aside>
+
+      {/* Bot Master Switch Quick Popover */}
+      {botPopoverOpen && isAdmin && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setBotPopoverOpen(false)} />
+          <div className="fixed left-3 right-3 top-14 md:top-auto md:right-auto md:bottom-24 md:left-[68px] md:w-[310px] z-50 bg-white border border-[#B0C4CF] rounded-lg shadow-xl overflow-hidden">
+            <div className="px-3.5 py-2.5 border-b border-[#E8EFF3] flex items-center justify-between">
+              <div>
+                <div className="text-[12.5px] font-bold text-[#0F232E]">
+                  Saklar Utama Agentic CS ({agentName})
+                </div>
+                <div className="text-[11px] text-[#5C7685]">
+                  Kendali instan balasan otomatis WhatsApp
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBotPopoverOpen(false)}
+                aria-label="Tutup panel saklar AI"
+                className="p-1 text-[#5C7685] hover:text-[#0F232E] cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="p-2 space-y-1">
+              {(
+                [
+                  {
+                    mode: 'OFF' as BotSwitchState,
+                    title: 'OFF (Manual Penuh)',
+                    desc: 'Bot nonaktif total; semua chat dijawab operator manusia.',
+                    dot: 'bg-[#94A3B8]',
+                  },
+                  {
+                    mode: 'ON_ALWAYS' as BotSwitchState,
+                    title: 'ON Penuh (24 Jam)',
+                    desc: `Agent ${agentName} aktif menjawab chat masuk (kecuali mode Ambil Alih).`,
+                    dot: 'bg-[#16A34A]',
+                  },
+                  {
+                    mode: 'ON_OUTSIDE_HOURS' as BotSwitchState,
+                    title: 'ON di Luar Jam Kerja',
+                    desc: 'Aktif otomatis hanya di luar jam operasional WIB pada Pengaturan.',
+                    dot: 'bg-[#D97706]',
+                  },
+                ] as const
+              ).map((opt) => {
+                const active = botSwitch === opt.mode;
+                return (
+                  <button
+                    key={opt.mode}
+                    type="button"
+                    onClick={async () => {
+                      setBotPopoverOpen(false);
+                      await updateBotSwitch(opt.mode);
+                    }}
+                    className={`w-full text-left p-2.5 rounded-md border transition cursor-pointer ${
+                      active
+                        ? 'bg-[#ECF6FA] border-[#00688E]'
+                        : 'bg-white border-transparent hover:bg-[#F4F8FA]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${opt.dot}`} />
+                      <span className="text-xs font-bold text-[#0F232E]">{opt.title}</span>
+                      {active && (
+                        <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#00688E] text-white">
+                          Aktif
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#5C7685] mt-1 leading-snug pl-4">
+                      {opt.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="px-3.5 py-2 bg-[#F4F8FA] border-t border-[#E8EFF3] flex items-center justify-between text-[11px]">
+              <Link
+                href="/settings?tab=agent"
+                onClick={() => setBotPopoverOpen(false)}
+                className="text-[#00688E] font-semibold hover:underline"
+              >
+                Pengaturan Model & Pengetahuan →
+              </Link>
+              <Link
+                href="/issues"
+                onClick={() => setBotPopoverOpen(false)}
+                className="text-[#435A68] font-semibold hover:underline"
+              >
+                Tiket ({openIssuesCount})
+              </Link>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Notification Bell Popover */}
       {notifOpen && (
@@ -490,6 +667,25 @@ function ShellInner({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBotPopoverOpen((prev) => !prev);
+                  setNotifOpen(false);
+                }}
+                className={`h-7 px-2 rounded-md border text-[11px] font-semibold flex items-center gap-1 cursor-pointer ${
+                  botSwitch === 'ON_ALWAYS'
+                    ? 'bg-[#E7F8F1] border-[#A7E7CB] text-[#0D6945]'
+                    : botSwitch === 'ON_OUTSIDE_HOURS'
+                    ? 'bg-[#FEF5E4] border-[#F7D488] text-[#8F5A05]'
+                    : 'bg-white border-[#B0C4CF] text-[#5C7685]'
+                }`}
+              >
+                <Bot className="w-3.5 h-3.5" />
+                <span>{botSwitch === 'OFF' ? 'OFF' : 'AI'}</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setNotifOpen((prev) => !prev)}
@@ -520,6 +716,7 @@ function ShellInner({
         isOpen={isQROpen}
         onClose={() => setIsQROpen(false)}
         status={sessionStatus}
+        sessionMe={sessionMe}
         onRefresh={refreshSession}
         onStartSession={handleStartSession}
         onLogout={handleLogoutWAHA}

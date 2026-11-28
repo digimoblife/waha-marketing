@@ -253,7 +253,7 @@ export async function upsertAndEmbedKnowledgeChunk(
   });
 
   const needsEmbedding = changed || !existing?.hasEmbedding;
-  if (needsEmbedding && hasGeminiApiKey()) {
+  if (needsEmbedding && (await hasGeminiApiKey())) {
     try {
       const vec = await embedText768(`${cleanTitle}\n\n${cleanContent}`);
       if (vec) {
@@ -333,7 +333,7 @@ export async function syncAllLapaqKnowledge(options?: {
     upserted,
     embeddedCount,
     skippedUnchanged,
-    geminiKeyPresent: hasGeminiApiKey(),
+    geminiKeyPresent: await hasGeminiApiKey(),
     warnings,
   };
 }
@@ -349,6 +349,35 @@ export interface RetrievedKnowledgeItem {
   distance?: number;
 }
 
+const SELLER_SLANG_EXPANSIONS: Array<{ pattern: RegExp; expansion: string }> = [
+  { pattern: /\b(wd|withdraw|cairin|narik\s+saldo)\b/i, expansion: 'tarik saldo penarikan dompet rekening pencairan' },
+  { pattern: /\b(tf|bukti\s+tf)\b/i, expansion: 'transfer manual konfirmasi bukti bayar pesanan' },
+  { pattern: /\b(norek|no\s+rek)\b/i, expansion: 'nomor rekening bank pencairan pembayaran' },
+  { pattern: /\bva\b/i, expansion: 'virtual account pembayaran online' },
+  { pattern: /\b(open\s+po|produk\s+po|\bpo\b|preorder)\b/i, expansion: 'produk pre order kuota' },
+  { pattern: /\b(ongkir|ekspedisi)\b/i, expansion: 'ongkos kirim atur pengiriman kurir' },
+  { pattern: /\b(olshop|regis|daftr|bikin\s+toko)\b/i, expansion: 'daftar akun seller uji coba 14 hari' },
+  { pattern: /\b(prduk|nambah\s+barang|barang\s+jualan)\b/i, expansion: 'tambah produk pertama kategori' },
+  { pattern: /\b(omset|cuan|sales\s+report)\b/i, expansion: 'lihat laporan penjualan ringkasan keuangan' },
+  { pattern: /\b(limit\s+stok|stok\s+tipis|stok\s+minimum|batas\s+stok)\b/i, expansion: 'info stok menipis batas minimum stok jumlah stok minimum' },
+  { pattern: /\b(custom\s+domain|domain\s+sendiri|\.com\s+sendiri)\b/i, expansion: 'segera hadir domain kustom' },
+  { pattern: /\b(multi\s*admin|staf|staff|pegawai|karyawan)\b/i, expansion: 'segera hadir staf dan akses' },
+  { pattern: /\b(estimasi\s+pajak|hitung\s+pajak|laporan\s+retur|laporan\s+traffic|sumber\s+trafik)\b/i, expansion: 'segera hadir laporan retur trafik estimasi pajak' },
+  { pattern: /\b(gateway\s+sendiri|payment\s+gateway\s+sendiri|midtrans\s+sendiri)\b/i, expansion: 'segera hadir gateway pembayaran milik sendiri' },
+  { pattern: /\b(notifikasi\s+whatsapp\s+otomatis|notif\s+wa\s+ke\s+pembeli|wa\s+otomatis)\b/i, expansion: 'segera hadir notifikasi whatsapp otomatis' },
+  { pattern: /\b(pesanan\s+saya\s+belum\s+sampai|paket\s+saya\s+mana|saya\s+beli\s+barang\s+di\s+toko)\b/i, expansion: 'pembeli salah sambung cek pesanan website toko' },
+];
+
+export function expandSellerQuery(rawQuery: string): string {
+  let expanded = sanitizeKnowledgeText(rawQuery);
+  for (const rule of SELLER_SLANG_EXPANSIONS) {
+    if (rule.pattern.test(rawQuery)) {
+      expanded += ` ${rule.expansion}`;
+    }
+  }
+  return expanded.trim();
+}
+
 /**
  * Hybrid Semantic + Keyword Retrieval over KnowledgeChunk.
  * Uses pgvector HNSW cosine distance when GEMINI_API_KEY is available, with automatic keyword fallback.
@@ -358,10 +387,10 @@ export async function searchKnowledgeBase(
   topK = 5
 ): Promise<RetrievedKnowledgeItem[]> {
   const safeLimit = Math.max(1, Math.min(15, topK));
-  const cleanQuery = query.trim();
+  const cleanQuery = expandSellerQuery(query);
   if (!cleanQuery) return [];
 
-  if (hasGeminiApiKey()) {
+  if (await hasGeminiApiKey()) {
     try {
       const qVec = await embedText768(cleanQuery);
       if (qVec) {
@@ -401,12 +430,40 @@ export async function searchKnowledgeBase(
   }
 
   // Keyword scoring fallback when running without GEMINI_API_KEY or before initial vectorization
-  const tokens = cleanQuery
+  const queryStopWords = new Set([
+    'cara',
+    'gimana',
+    'bagaimana',
+    'dimana',
+    'apakah',
+    'bisa',
+    'saya',
+    'aku',
+    'kak',
+    'kakak',
+    'dong',
+    'yang',
+    'untuk',
+    'dari',
+    'dengan',
+    'lapaq',
+    'mau',
+    'udah',
+    'sudah',
+    'belum',
+    'kenapa',
+    'kok',
+  ]);
+  const rawWords = cleanQuery
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter((t) => t.length >= 3)
-    .slice(0, 8);
+    .filter((t) => t.length >= 3);
+  const filteredWords = Array.from(new Set(rawWords.filter((t) => !queryStopWords.has(t))));
+  const tokens = (filteredWords.length > 0 ? filteredWords : Array.from(new Set(rawWords))).slice(
+    0,
+    14
+  );
 
   if (tokens.length === 0) return [];
 
@@ -418,17 +475,22 @@ export async function searchKnowledgeBase(
         { content: { contains: tok, mode: 'insensitive' } },
       ]),
     },
-    take: 40,
+    take: 58,
   });
 
   const scored = candidates
     .map((c) => {
       const hayTitle = c.title.toLowerCase();
       const hayBody = c.content.toLowerCase();
+      const hayKey = c.sourceKey.toLowerCase();
       let score = 0;
       for (const tok of tokens) {
+        if (hayKey.includes(tok)) score += 4;
         if (hayTitle.includes(tok)) score += 3;
         if (hayBody.includes(tok)) score += 1;
+      }
+      if (c.sourceType === 'LOCKED_POLICY' && score >= 4) {
+        score += 2;
       }
       return { item: c, score };
     })
@@ -467,7 +529,7 @@ export async function searchCaseMemory(
   const cleanQuery = symptomQuery.trim();
   if (!cleanQuery) return [];
 
-  if (hasGeminiApiKey()) {
+  if (await hasGeminiApiKey()) {
     try {
       const qVec = await embedText768(cleanQuery);
       if (qVec) {

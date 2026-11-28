@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Send, Pause, Play, XCircle, Loader2, Plus, AlertCircle, Download, Search } from 'lucide-react';
+import { Send, Pause, Play, XCircle, Loader2, Plus, AlertCircle, Download, Search, Bot, Sparkles } from 'lucide-react';
 import { sanitizePhone, formatDisplayPhone } from '@/lib/phone';
 import { interpolateTemplate } from '@/lib/template-utils';
 import { useWorkspace } from '@/components/WorkspaceContext';
@@ -20,7 +20,7 @@ interface ManualRecipient {
 
 function BroadcastPageInner() {
   const searchParams = useSearchParams();
-  const { notify } = useWorkspace();
+  const { notify, agentName } = useWorkspace();
 
   const [contacts, setContacts] = useState<any[]>([]);
   const [manualRecipients, setManualRecipients] = useState<ManualRecipient[]>([]);
@@ -44,6 +44,9 @@ function BroadcastPageInner() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [messageBody, setMessageBody] = useState('');
   const [delayPreset, setDelayPreset] = useState<'safe' | 'extra' | 'fast'>('safe');
+  const [enableAiFollowup, setEnableAiFollowup] = useState(false);
+  const [campaignGoal, setCampaignGoal] = useState('');
+  const [loadingPassive, setLoadingPassive] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -179,6 +182,85 @@ function BroadcastPageInner() {
     notify(`Nomor ${formatDisplayPhone(clean)} ditambahkan ke daftar penerima`);
   };
 
+  const handlePullPassiveMerchants = async () => {
+    if (loadingPassive) return;
+    setLoadingPassive(true);
+    try {
+      const res = await fetch('/api/agent/passive-merchants?minDays=3&limit=80', {
+        cache: 'no-store',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal menarik merchant pasif');
+
+      const list: Array<{
+        phone: string;
+        ownerName: string;
+        storeName: string;
+        businessCategory: string | null;
+      }> = data.merchants || [];
+
+      if (list.length === 0) {
+        notify('Belum ada kandidat merchant pasif (0 produk / belum selesai setup) yang ditemukan');
+        return;
+      }
+
+      const nextManual: ManualRecipient[] = [];
+      const nextSelected = new Set<string>();
+
+      for (const m of list) {
+        const clean = sanitizePhone(m.phone);
+        if (!clean) continue;
+        const existing = contacts.find((c) => sanitizePhone(c.phone) === clean);
+        if (existing) {
+          nextSelected.add(existing.id);
+        } else {
+          const id = `manual_${clean}`;
+          nextManual.push({
+            id,
+            phone: clean,
+            name: m.ownerName || 'Kak',
+            storeName: m.storeName || formatDisplayPhone(clean),
+            businessCategory: m.businessCategory || 'Manual',
+            isWAUser: true,
+          });
+          nextSelected.add(id);
+        }
+      }
+
+      if (nextManual.length > 0) {
+        setManualRecipients((prev) => {
+          const existingPhones = new Set(prev.map((p) => sanitizePhone(p.phone)));
+          return [...nextManual.filter((n) => !existingPhones.has(n.phone)), ...prev];
+        });
+      }
+
+      setSelectedIds(nextSelected);
+      setCategoryFilter('ALL');
+      setName('Pendampingan Setup Toko Baru Lapaq');
+      setSelectedTemplateId('');
+      setMessageBody(
+        `Halo kak {nama}, saya ${agentName || 'Rani'} dari Lapaq. ${
+          agentName || 'Rani'
+        } lihat kakak sudah mendaftar toko *{nama_toko}*, tapi belum sempat melanjutkan setup toko atau upload produk pertama. Apakah ada kendala atau bagian yang bisa ${
+          agentName || 'Rani'
+        } bantu pandu pelan-pelan?`
+      );
+      setEnableAiFollowup(true);
+      setCampaignGoal(
+        'Pendampingan empatik merchant baru Lapaq yang belum menyelesaikan setup toko atau belum upload produk pertama'
+      );
+      notify(
+        `${nextSelected.size} merchant pasif dimuat (${
+          data.source === 'LAPAQ_API' ? 'Bridge Lapaq Live' : 'Database Lokal'
+        }) dengan tindak lanjut AI aktif`
+      );
+    } catch (err: any) {
+      notify(err.message || 'Gagal memuat merchant pasif');
+    } finally {
+      setLoadingPassive(false);
+    }
+  };
+
   const handleTemplateChange = (id: string) => {
     setSelectedTemplateId(id);
     const tpl = templates.find((t) => t.id === id);
@@ -217,6 +299,8 @@ function BroadcastPageInner() {
           delayMinSec: bounds.min,
           delayMaxSec: bounds.max,
           startNow: true,
+          enableAiFollowup,
+          campaignGoal: enableAiFollowup ? campaignGoal.trim() : null,
           recipients: selectedRecipients.map((r) => ({
             phone: r.phone,
             contactId: r.id.startsWith('manual_') ? null : r.id,
@@ -363,6 +447,32 @@ function BroadcastPageInner() {
                 <span>{error}</span>
               </div>
             )}
+
+            {/* Kasus 1 Quick Preset: Passive Merchant Awareness */}
+            <div className="p-3 rounded-lg bg-[#ECF6FA] border border-[#A7D6E7] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-[#0F232E] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#00688E] shrink-0" />
+                  <span>Awareness Merchant Pasif Lapaq (Belum Setup / 0 Produk)</span>
+                </div>
+                <p className="text-[11px] text-[#435A68] mt-0.5">
+                  Tarik otomatis daftar seller baru yang belum lanjut setup toko beserta sapaan ramah dari {agentName || 'Rani'}.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={loadingPassive}
+                onClick={handlePullPassiveMerchants}
+                className="h-8 px-3 bg-white hover:bg-[#FAFBFB] border border-[#00688E] text-[#00688E] text-xs font-semibold rounded-md inline-flex items-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                {loadingPassive ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Bot className="w-3.5 h-3.5" />
+                )}
+                <span>Tarik Merchant Pasif</span>
+              </button>
+            </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#0F232E] mb-1">Nama Campaign</label>
@@ -563,6 +673,42 @@ function BroadcastPageInner() {
                 </div>
               </div>
             )}
+
+            {/* AI Agent Reply Follow-up Configuration */}
+            <div className="p-3.5 rounded-lg border border-[#D1DEE5] bg-[#F4F8FA] space-y-2.5">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enableAiFollowup}
+                  onChange={(e) => setEnableAiFollowup(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 shrink-0 cursor-pointer"
+                />
+                <div>
+                  <div className="text-xs font-bold text-[#0F232E] flex items-center gap-1.5">
+                    <Bot className="w-3.5 h-3.5 text-[#00688E]" />
+                    <span>Tangani Balasan Merchant dengan Agentic CS ({agentName || 'Rani'})</span>
+                  </div>
+                  <p className="text-[11px] text-[#5C7685] leading-snug">
+                    Jika diaktifkan, saat merchant membalas sapaan broadcast ini (dan saklar utama AI aktif), Agent akan langsung memandu sesuai konteks tujuan campaign tanpa bertele-tele.
+                  </p>
+                </div>
+              </label>
+
+              {enableAiFollowup && (
+                <div className="pl-6">
+                  <label className="block text-[11px] font-semibold text-[#435A68] mb-1">
+                    Tujuan Konteks Campaign untuk Agent AI:
+                  </label>
+                  <input
+                    type="text"
+                    value={campaignGoal}
+                    onChange={(e) => setCampaignGoal(e.target.value)}
+                    placeholder="Misal: Bantu merchant menyelesaikan upload produk pertama & atur kurir toko"
+                    className="w-full h-8 px-2.5 bg-white border border-[#B0C4CF] rounded-md text-xs focus:outline-none focus:border-[#00688E]"
+                  />
+                </div>
+              )}
+            </div>
 
             <div className="pt-2 border-t border-[#E8EFF3] flex items-center justify-between gap-3">
               <span className="text-[11.5px] text-[#5C7685]">
@@ -832,8 +978,16 @@ function BroadcastPageInner() {
                           }`}
                         >
                           <td className="py-2.5 px-4">
-                            <div className="font-semibold text-[#0F232E] truncate max-w-[180px]">
-                              {c.name}
+                            <div className="font-semibold text-[#0F232E] truncate max-w-[180px] flex items-center gap-1.5">
+                              <span className="truncate">{c.name}</span>
+                              {c.enableAiFollowup && (
+                                <span
+                                  title="Balasan ditangani Agentic CS"
+                                  className="inline-flex items-center px-1 py-0.5 rounded bg-[#ECF6FA] border border-[#A7D6E7] text-[#00688E] text-[9.5px] font-bold shrink-0"
+                                >
+                                  AI
+                                </span>
+                              )}
                             </div>
                             <div className="text-[10.5px] text-[#809AA8] tabular-nums">
                               {new Date(c.createdAt).toLocaleDateString('id-ID', {

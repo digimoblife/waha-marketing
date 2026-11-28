@@ -19,8 +19,11 @@ export interface SlaHoursSettings {
 export type BotMasterSwitch = 'OFF' | 'ON_ALWAYS' | 'ON_OUTSIDE_HOURS';
 export type LapaqConnectorMode = 'STANDALONE' | 'SANDBOX_API' | 'PRODUCTION_API';
 
+export type DefaultChatAgentMode = 'AI_ACTIVE' | 'HUMAN_TAKEOVER';
+
 export interface AgentConfigSettings {
   masterSwitch: BotMasterSwitch;
+  defaultChatAgentMode: DefaultChatAgentMode;
   agentName: string;
   debounceMs: number;
   maxDailyAiTurnsPerChat: number;
@@ -66,11 +69,12 @@ export const DEFAULT_SETTINGS: WorkspaceSettings = {
   ],
   agentConfig: {
     masterSwitch: 'OFF',
+    defaultChatAgentMode: 'AI_ACTIVE',
     agentName: 'Rani',
     debounceMs: 5000,
     maxDailyAiTurnsPerChat: 40,
-    primaryModel: 'gemini-3.8-flash',
-    fallbackProModel: 'gemini-4-argon',
+    primaryModel: 'gemini-3.6-flash',
+    fallbackProModel: 'gemini-3.6-flash',
     liteModel: 'gemini-3.5-flash-lite',
     embeddingModel: 'gemini-embedding-2',
     lapaqConnectorMode: 'STANDALONE',
@@ -205,6 +209,8 @@ export async function saveWorkspaceSettings(partial: Partial<WorkspaceSettings>)
 
     const cleanAgent: AgentConfigSettings = {
       masterSwitch: validSwitches.includes(raw.masterSwitch) ? raw.masterSwitch : 'OFF',
+      defaultChatAgentMode:
+        raw.defaultChatAgentMode === 'HUMAN_TAKEOVER' ? 'HUMAN_TAKEOVER' : 'AI_ACTIVE',
       agentName: String(raw.agentName || 'Rani').trim().slice(0, 40) || 'Rani',
       debounceMs: Math.max(1000, Math.min(20000, Number(raw.debounceMs) || 5000)),
       maxDailyAiTurnsPerChat: Math.max(5, Math.min(500, Number(raw.maxDailyAiTurnsPerChat) || 40)),

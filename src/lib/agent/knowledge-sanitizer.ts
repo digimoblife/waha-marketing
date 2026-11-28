@@ -21,11 +21,11 @@ export const FORBIDDEN_RAW_CHECK_REGEX =
   /\b(midtrans|pakkasir|pakasir|ipaymu|xendit|faspay|amazon\s+payment|biteship|cloudflare\s*r2|r2\s*bucket|drizzle-orm|schema\.pg\.ts|password_hash|encrypted_seller_data|email_otp_hash|superadmin_accounts)\b/i;
 
 export const ORPHAN_ROUTE_PATTERNS: RegExp[] = [
-  /\/admin\/vouchers\b/i,
-  /\/admin\/affiliates\b/i,
-  /\/admin\/spotlight\b/i,
-  /\/admin\/retention\b/i,
-  /\/admin\/seller-profile\b/i,
+  /(?:\/admin)?\/vouchers\b/i,
+  /(?:\/admin)?\/affiliates\b/i,
+  /(?:\/admin)?\/spotlight\b/i,
+  /(?:\/admin)?\/retention\b/i,
+  /(?:\/admin)?\/seller-profile\b/i,
   /[?&]tab=notifications\b/i,
 ];
 

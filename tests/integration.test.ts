@@ -596,7 +596,7 @@ test('Integration: Phase 2 Knowledge Indexer, Quick Notes, Agent Settings, and L
   );
   assert.equal(delNoteRes.status, 200);
 
-  // 4. Agent Settings Master Switch persistence
+  // 4. Agent Settings Master Switch & Encrypted UI API Key persistence (write-only masked response)
   const patchAgentRes = await agentSettingsPATCH(
     makeJsonReq(
       'http://localhost/api/admin/agent/settings',
@@ -605,6 +605,7 @@ test('Integration: Phase 2 Knowledge Indexer, Quick Notes, Agent Settings, and L
         agentName: 'Nadia',
         lapaqConnectorMode: 'SANDBOX_API',
         lapaqInternalApiUrl: 'http://127.0.0.1:59999', // intentionally unreachable port to test graceful fallback!
+        geminiApiKey: 'AIzaSyDummyTestKeyForUiStorage9876',
       },
       'PATCH'
     )
@@ -613,6 +614,15 @@ test('Integration: Phase 2 Knowledge Indexer, Quick Notes, Agent Settings, and L
   const getAgentJson = await (await agentSettingsGET()).json();
   assert.equal(getAgentJson.agentConfig.masterSwitch, 'ON_OUTSIDE_HOURS');
   assert.equal(getAgentJson.agentConfig.agentName, 'Nadia');
+  assert.equal(getAgentJson.geminiKeyConfigured, true);
+  assert.equal(getAgentJson.geminiKeySource, 'DB');
+  assert.equal(getAgentJson.geminiKeyMasked, 'AIza••••••••9876');
+  assert.equal(getAgentJson.geminiApiKey, undefined, 'Raw key must NEVER be returned in GET');
+
+  // Clear dummy key so offline tests continue using deterministic fallback without calling live Google API
+  await agentSettingsPATCH(
+    makeJsonReq('http://localhost/api/admin/agent/settings', { clearGeminiKey: true }, 'PATCH')
+  );
 
   // 5. LapaqBridge graceful fallback + VERIFIED_OWNER vs UNVERIFIED_CALLER enforcement
   process.env.INTERNAL_CS_API_KEY = 'test_key_123';

@@ -1,0 +1,264 @@
+{
+  "description": "40 pertanyaan representatif seller Lapaq, calon seller, dan pembeli salah sambung (bahasa baku, singkatan UMKM, typo, add-on, aturan keuangan terkunci, dan fitur Segera Hadir).",
+  "questions": [
+    {
+      "id": "GQ-01",
+      "tag": "calon-seller",
+      "query": "cara daftar jadi seller lapaq apakah gratis",
+      "expectKeys": ["demo:daftar-akun-seller", "faq:tiga-audiens-calon-seller-dan-pembeli"],
+      "mustMatchRegex": "14 hari"
+    },
+    {
+      "id": "GQ-02",
+      "tag": "slang",
+      "query": "gmn bikin olshop regis daftr toko disini",
+      "expectKeys": ["demo:daftar-akun-seller", "faq:tiga-audiens-calon-seller-dan-pembeli"]
+    },
+    {
+      "id": "GQ-03",
+      "tag": "onboarding",
+      "query": "onboarding belum selesai menu kekunci lengkapi data toko dimana",
+      "expectKeys": ["demo:lengkapi-data-toko"]
+    },
+    {
+      "id": "GQ-04",
+      "tag": "typo",
+      "query": "cara tambah prduk baru pertama kali",
+      "expectKeys": ["demo:tambah-produk-pertama", "policy:aturan-validasi-tersembunyi-produk-dan-toko"]
+    },
+    {
+      "id": "GQ-05",
+      "tag": "troubleshooting",
+      "query": "tombol tambah produk terkunci muncul buat kategori terlebih dahulu",
+      "expectKeys": ["policy:aturan-validasi-tersembunyi-produk-dan-toko", "demo:tambah-produk-pertama"],
+      "mustMatchRegex": "Buat kategori terlebih dahulu"
+    },
+    {
+      "id": "GQ-06",
+      "tag": "troubleshooting",
+      "query": "gagal upload foto produk format heic iphone tidak bisa simpan",
+      "expectKeys": ["policy:aturan-validasi-tersembunyi-produk-dan-toko"],
+      "mustMatchRegex": "2 MB"
+    },
+    {
+      "id": "GQ-07",
+      "tag": "produk-digital",
+      "query": "cara jual ebook produk digital link google drive",
+      "expectKeys": ["demo:tambah-produk-digital"],
+      "mustMatchRegex": "URL download"
+    },
+    {
+      "id": "GQ-08",
+      "tag": "varian",
+      "query": "cara atur varian ukuran produk harga dan berat berbeda",
+      "expectKeys": ["demo:atur-varian-produk"]
+    },
+    {
+      "id": "GQ-09",
+      "tag": "slang-po",
+      "query": "cara open po jual barang preorder 2 minggu",
+      "expectKeys": ["demo:produk-pre-order"]
+    },
+    {
+      "id": "GQ-10",
+      "tag": "draft-impor",
+      "query": "produk hasil migrasi impor shopee kok ga muncul masih draft",
+      "expectKeys": ["policy:aturan-validasi-tersembunyi-produk-dan-toko", "demo:nonaktifkan-hapus-produk", "demo:migrasi-shopee"],
+      "mustMatchRegex": "Draft"
+    },
+    {
+      "id": "GQ-11",
+      "tag": "addon-limit-stok",
+      "query": "dimana atur batas jumlah stok minimum pada addon limit stok menipis",
+      "expectKeys": ["addon:low_stock_alerts"],
+      "mustMatchRegex": "Jumlah stok minimum"
+    },
+    {
+      "id": "GQ-12",
+      "tag": "addon-xtra",
+      "query": "kapasitas produk penuh tambah 200 slot xtra product",
+      "expectKeys": ["addon:xtra_product"],
+      "mustMatchRegex": "200"
+    },
+    {
+      "id": "GQ-13",
+      "tag": "addon-import",
+      "query": "impor produk massal csv shopee sisa kuota hangus ga",
+      "expectKeys": ["addon:product_import", "demo:impor-produk"],
+      "mustMatchRegex": "tidak hangus"
+    },
+    {
+      "id": "GQ-14",
+      "tag": "addon-stock-lock",
+      "query": "cara batasi minimal dan maksimal pembelian produk stock lock",
+      "expectKeys": ["addon:stock_lock"]
+    },
+    {
+      "id": "GQ-15",
+      "tag": "addon-unggulan",
+      "query": "pajang produk unggulan bintang di beranda toko",
+      "expectKeys": ["addon:featured_products", "demo:produk-unggulan"]
+    },
+    {
+      "id": "GQ-16",
+      "tag": "addon-kupon",
+      "query": "bikin kupon diskon ongkir apakah memotong asuransi pengiriman",
+      "expectKeys": ["addon:coupon_system", "demo:buat-kupon-diskon"],
+      "mustMatchRegex": "asuransi"
+    },
+    {
+      "id": "GQ-17",
+      "tag": "kupon-retensi",
+      "query": "cetak kartu kupon retensi repeat order di paket pesanan",
+      "expectKeys": ["demo:kupon-retensi", "addon:coupon_system"]
+    },
+    {
+      "id": "GQ-18",
+      "tag": "addon-abandoned",
+      "query": "pengingat email keranjang ditinggalkan pembeli belum checkout",
+      "expectKeys": ["addon:abandoned_cart", "demo:keranjang-ditinggalkan"]
+    },
+    {
+      "id": "GQ-19",
+      "tag": "addon-ulasan",
+      "query": "sembunyikan atau tampilkan ulasan dan rating pembeli di toko",
+      "expectKeys": ["addon:store_reviews", "demo:kelola-ulasan"]
+    },
+    {
+      "id": "GQ-20",
+      "tag": "addon-pixel",
+      "query": "pasang meta pixel google analytics ga4 gtm di toko",
+      "expectKeys": ["addon:merchant_analytics"]
+    },
+    {
+      "id": "GQ-21",
+      "tag": "locked-finance-qris",
+      "query": "kapan dana pembayaran qris lapaq menunggu cair pindah ke saldo tersedia",
+      "expectKeys": ["policy:keuangan-qris-vs-manual", "demo:cek-dana-penjualan"],
+      "mustMatchRegex": "12\\.00 WIB"
+    },
+    {
+      "id": "GQ-22",
+      "tag": "locked-finance-tf",
+      "query": "pembeli bayar bukti tf transfer manual kok uangnya ga masuk dompet lapaq",
+      "expectKeys": ["policy:keuangan-qris-vs-manual", "demo:konfirmasi-transfer-manual"],
+      "mustMatchRegex": "rekening"
+    },
+    {
+      "id": "GQ-23",
+      "tag": "slang-wd",
+      "query": "cara wd cairin saldo dompet berapa lama prosesnya",
+      "expectKeys": ["demo:tarik-saldo", "policy:keuangan-qris-vs-manual", "demo:penarikan-gagal"],
+      "mustMatchRegex": "1x24 jam"
+    },
+    {
+      "id": "GQ-24",
+      "tag": "slang-norek",
+      "query": "ganti norek pencairan wd gagal ditolak",
+      "expectKeys": ["demo:penarikan-gagal", "demo:tarik-saldo"]
+    },
+    {
+      "id": "GQ-25",
+      "tag": "slang-va",
+      "query": "aktifkan pembayaran va virtual account dan rekening manual",
+      "expectKeys": ["demo:atur-pembayaran"]
+    },
+    {
+      "id": "GQ-26",
+      "tag": "slang-ongkir",
+      "query": "atur ongkir kurir jne sicepat gosend titik jemput",
+      "expectKeys": ["demo:atur-pengiriman"]
+    },
+    {
+      "id": "GQ-27",
+      "tag": "pesanan",
+      "query": "ada pesanan masuk cara input nomor resi sampai selesai",
+      "expectKeys": ["demo:proses-pesanan-pertama"]
+    },
+    {
+      "id": "GQ-28",
+      "tag": "cetak-label",
+      "query": "cetak label pengiriman dan invoice pdf sekaligus",
+      "expectKeys": ["demo:cetak-invoice-dan-label"]
+    },
+    {
+      "id": "GQ-29",
+      "tag": "batalkan-pesanan",
+      "query": "apakah pesanan qris online bisa dibatalkan manual oleh seller",
+      "expectKeys": ["demo:batalkan-pesanan", "policy:keuangan-qris-vs-manual"]
+    },
+    {
+      "id": "GQ-30",
+      "tag": "slang-omset",
+      "query": "liat omset cuan laporan penjualan bulanan",
+      "expectKeys": ["demo:lihat-laporan-penjualan"]
+    },
+    {
+      "id": "GQ-31",
+      "tag": "ekspor-csv",
+      "query": "ekspor download data pesanan dan mutasi saldo ke csv excel",
+      "expectKeys": ["demo:ekspor-data-csv"]
+    },
+    {
+      "id": "GQ-32",
+      "tag": "profil-slug",
+      "query": "apakah alamat link slug toko bisa diubah dan ganti nama toko",
+      "expectKeys": ["policy:aturan-validasi-tersembunyi-produk-dan-toko", "demo:ubah-profil-toko"],
+      "mustMatchRegex": "3 bulan"
+    },
+    {
+      "id": "GQ-33",
+      "tag": "langganan",
+      "query": "masa percobaan trial habis cara perpanjang langganan billing",
+      "expectKeys": ["demo:perpanjang-langganan"]
+    },
+    {
+      "id": "GQ-34",
+      "tag": "keamanan-akun",
+      "query": "lupa kata sandi kirim link reset password login toko",
+      "expectKeys": ["demo:lupa-kata-sandi", "demo:ganti-password-akun"]
+    },
+    {
+      "id": "GQ-35",
+      "tag": "coming-soon-domain",
+      "query": "bisa pasang custom domain .com sendiri di toko",
+      "expectKeys": ["policy:fitur-segera-hadir"],
+      "mustMatchRegex": "Segera hadir"
+    },
+    {
+      "id": "GQ-36",
+      "tag": "coming-soon-staf",
+      "query": "cara tambah akun staf karyawan multi admin toko",
+      "expectKeys": ["policy:fitur-segera-hadir"],
+      "mustMatchRegex": "Segera hadir"
+    },
+    {
+      "id": "GQ-37",
+      "tag": "coming-soon-pajak",
+      "query": "dimana lihat laporan retur dan estimasi pajak bulanan",
+      "expectKeys": ["policy:fitur-segera-hadir"],
+      "mustMatchRegex": "Segera hadir"
+    },
+    {
+      "id": "GQ-38",
+      "tag": "coming-soon-wa",
+      "query": "pengaturan notifikasi whatsapp otomatis ke pembeli",
+      "expectKeys": ["policy:fitur-segera-hadir"],
+      "mustMatchRegex": "Segera hadir"
+    },
+    {
+      "id": "GQ-39",
+      "tag": "coming-soon-gateway",
+      "query": "apakah bisa pasang payment gateway sendiri",
+      "expectKeys": ["policy:fitur-segera-hadir"],
+      "mustMatchRegex": "Segera hadir"
+    },
+    {
+      "id": "GQ-40",
+      "tag": "pembeli-salah-sambung",
+      "query": "kak pesanan saya belum sampai paket saya mana saya beli barang di toko",
+      "expectKeys": ["faq:tiga-audiens-calon-seller-dan-pembeli"],
+      "mustMatchRegex": "Cek Pesanan"
+    }
+  ]
+}
