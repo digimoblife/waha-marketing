@@ -336,12 +336,53 @@ async function runGeminiWithTools(req: ModelTurnRequest): Promise<string> {
     : new Error('Seluruh model Gemini dalam rantai fallback sedang tidak tersedia.');
 }
 
+function isWahaSendFailure(res: any): boolean {
+  return (
+    !res ||
+    Boolean(res.error) ||
+    res.ok === false ||
+    res.status >= 400 ||
+    (typeof res.statusCode === 'number' && res.statusCode >= 400)
+  );
+}
+
+function describeWahaFailure(res: any): string {
+  return (
+    res?.error?.message ||
+    (typeof res?.error === 'string' ? res.error : '') ||
+    res?.message ||
+    'WAHA menolak pengiriman pesan'
+  );
+}
+
+/**
+ * Re-reads the master switch and the chat's agentMode. A turn can run for many seconds
+ * (model call + typing delay), during which an operator may take over or an Admin may
+ * switch the bot OFF; the reply must not go out in either case.
+ */
+async function isAgentStillAllowedToReply(chatId: string): Promise<{ allowed: boolean; reason: string }> {
+  const [settings, chat] = await Promise.all([
+    getWorkspaceSettings(),
+    prisma.chat.findUnique({ where: { id: chatId }, select: { agentMode: true } }),
+  ]);
+  if (!chat) return { allowed: false, reason: 'chat_not_found' };
+  const gate = evaluateBotGate({ fromMe: false, chatId, agentMode: chat.agentMode, settings });
+  return { allowed: gate.shouldProcess, reason: gate.reason };
+}
+
+type AgentDeliveryResult =
+  | { status: 'sent'; msgId: string }
+  | { status: 'skipped'; reason: string }
+  | { status: 'failed'; error: string };
+
 async function deliverAndRecordAgentMessage(params: {
   chatId: string;
   contactId: string | null;
   replyText: string;
   replyToMsgId?: string;
-}): Promise<string> {
+  /** Autonomous replies re-check the bot gate right before sending. Admin-triggered sends do not. */
+  respectBotGate?: boolean;
+}): Promise<AgentDeliveryResult> {
   // Only quote replyToMsgId when its embedded JID matches params.chatId (avoids Baileys @lid vs @c.us quote mismatch)
   const safeReplyTo =
     params.replyToMsgId &&
@@ -350,16 +391,46 @@ async function deliverAndRecordAgentMessage(params: {
       ? params.replyToMsgId
       : undefined;
 
-  let wahaRes = await waha.deliverHumanLikeReply(params.chatId, params.replyText, {
-    replyTo: safeReplyTo,
-  });
+  let gateReason = '';
+  const gateStillOpen = async () => {
+    if (!params.respectBotGate) return true;
+    const check = await isAgentStillAllowedToReply(params.chatId);
+    gateReason = check.reason;
+    return check.allowed;
+  };
 
-  if (
-    safeReplyTo &&
-    (wahaRes?.error || wahaRes?.status >= 400 || (wahaRes?.statusCode && wahaRes.statusCode >= 400))
-  ) {
-    // Fallback without quote if quoting failed in WAHA NOWEB
-    wahaRes = await waha.sendText(params.chatId, params.replyText);
+  if (!(await gateStillOpen())) {
+    return logSkippedDelivery(params.chatId, gateReason);
+  }
+
+  let wahaRes: any;
+  try {
+    wahaRes = await waha.deliverHumanLikeReply(params.chatId, params.replyText, {
+      replyTo: safeReplyTo,
+      beforeSend: gateStillOpen,
+    });
+    if (wahaRes?.skipped) {
+      return logSkippedDelivery(params.chatId, gateReason);
+    }
+
+    if (safeReplyTo && isWahaSendFailure(wahaRes)) {
+      // Fallback without quote if quoting failed in WAHA NOWEB
+      wahaRes = await waha.sendText(params.chatId, params.replyText);
+    }
+  } catch (err: any) {
+    wahaRes = { error: err?.message || 'Koneksi ke WAHA gagal' };
+  }
+
+  if (isWahaSendFailure(wahaRes)) {
+    const error = describeWahaFailure(wahaRes);
+    await createLog(
+      'ERROR',
+      'ERROR',
+      `Balasan Agent gagal dikirim ke ${params.chatId}: ${error}`,
+      { chatId: params.chatId },
+      error
+    );
+    return { status: 'failed', error };
   }
 
   const timestamp = new Date();
@@ -445,7 +516,17 @@ async function deliverAndRecordAgentMessage(params: {
     })
     .catch(() => null);
 
-  return msgId;
+  return { status: 'sent', msgId };
+}
+
+async function logSkippedDelivery(chatId: string, reason: string): Promise<AgentDeliveryResult> {
+  await createLog(
+    'AGENT',
+    'WARNING',
+    `Balasan Agent dibatalkan sebelum terkirim ke ${chatId} (${reason})`,
+    { chatId, reason }
+  );
+  return { status: 'skipped', reason };
 }
 
 /**
@@ -586,6 +667,7 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
       contactId: chat.contactId,
       replyText: ackReply,
       replyToMsgId: turn.lastMsgId,
+      respectBotGate: true,
     });
     return;
   }
@@ -628,6 +710,7 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
       contactId: chat.contactId,
       replyText: safety.safeImmediateReply,
       replyToMsgId: turn.lastMsgId,
+      respectBotGate: true,
     });
     return;
   }
@@ -741,23 +824,17 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
     ? undefined
     : await getOrCreatePersonaCache(targetModel, staticInstruction);
 
-  try {
-    let rawReply = await runGeminiWithTools({
-      model: targetModel,
-      thinkingLevel: targetThinkingLevel,
-      systemInstruction: staticInstruction,
-      cachedContentName,
-      contents,
-      toolContext: {
-        chatId: chat.id,
-        contactId: chat.contactId,
-        verifiedSenderPhone: turn.senderPhone,
-        recentScreenshotUrls,
-      },
-    });
+  const toolContext: ToolExecutionContext = {
+    chatId: chat.id,
+    contactId: chat.contactId,
+    verifiedSenderPhone: turn.senderPhone,
+    recentScreenshotUrls,
+  };
 
-    // If refund topic was detected and model somehow forgot to escalate, enforce deterministic escalation ticket!
-    if (safety.isRefundOrCancellation) {
+  // Refund/cancellation requests are escalated deterministically BEFORE the model runs, so the
+  // ticket exists for Admin even if Gemini is down or the reply is later blocked.
+  if (safety.isRefundOrCancellation) {
+    try {
       await executeAgentToolCall(
         'create_escalation_issue',
         {
@@ -766,15 +843,44 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
           symptom_summary: turn.combinedText.slice(0, 1000),
           steps_tried: 'Langsung dieskalasi sesuai kebijakan nol janji refund.',
         },
-        {
-          chatId: chat.id,
-          contactId: chat.contactId,
-          verifiedSenderPhone: turn.senderPhone,
-          recentScreenshotUrls,
-        }
+        toolContext
+      );
+    } catch (escalationErr: any) {
+      await createLog(
+        'ERROR',
+        'ERROR',
+        `Gagal membuat tiket refund untuk ${chat.id}: ${escalationErr?.message || 'Unknown error'}`,
+        { chatId: chat.id },
+        escalationErr?.message
       );
     }
+  }
 
+  let rawReply: string;
+  try {
+    rawReply = await runGeminiWithTools({
+      model: targetModel,
+      thinkingLevel: targetThinkingLevel,
+      systemInstruction: staticInstruction,
+      cachedContentName,
+      contents,
+      toolContext,
+    });
+  } catch (err: any) {
+    console.error(`[AgentOrchestrator] Failed processing turn for ${chat.id}:`, err);
+    await createLog(
+      'ERROR',
+      'ERROR',
+      `Agent Orchestrator gagal memproses chat ${chat.id}: ${err?.message || 'Unknown error'}`,
+      { chatId: chat.id, model: targetModel },
+      err?.message
+    );
+    if (!safety.isRefundOrCancellation) return;
+    // The ticket is already recorded; tell the merchant without promising anything.
+    rawReply = `Baik kak, permintaan Kakak sudah ${agentName} teruskan ke tim Admin Lapaq untuk ditinjau. Kami belum bisa memastikan hasilnya sekarang, nanti tim kami kabari Kakak lewat chat ini ya.`;
+  }
+
+  try {
     // Layer 5 Deterministic Output Guardrail
     const checked = validateAgentOutput(rawReply, {
       agentName,
@@ -792,12 +898,14 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
       );
     }
 
-    await deliverAndRecordAgentMessage({
+    const delivery = await deliverAndRecordAgentMessage({
       chatId: chat.id,
       contactId: chat.contactId,
       replyText: checked.text,
       replyToMsgId: turn.lastMsgId,
+      respectBotGate: true,
     });
+    if (delivery.status !== 'sent') return;
 
     // Clear one-time campaignContext once Agent has responded to merchant's first reply
     if (chat.campaignContext) {
@@ -814,11 +922,11 @@ export async function processFlushedAgentTurn(turn: FlushedChatTurn): Promise<vo
       void summarizeMerchantMemoryAsync(chat.contactId, chat.id, agentConfig);
     }
   } catch (err: any) {
-    console.error(`[AgentOrchestrator] Failed processing turn for ${chat.id}:`, err);
+    console.error(`[AgentOrchestrator] Failed delivering turn for ${chat.id}:`, err);
     await createLog(
       'ERROR',
       'ERROR',
-      `Agent Orchestrator gagal memproses chat ${chat.id}: ${err?.message || 'Unknown error'}`,
+      `Agent Orchestrator gagal mengirim balasan ke ${chat.id}: ${err?.message || 'Unknown error'}`,
       { chatId: chat.id, model: targetModel },
       err?.message
     );
@@ -867,11 +975,22 @@ export async function sendIssueResolvedFollowup(issueId: string): Promise<{
     isRefundContext: issue.category === 'REFUND_REQUEST',
   });
 
-  await deliverAndRecordAgentMessage({
+  const delivery = await deliverAndRecordAgentMessage({
     chatId: issue.chatId,
     contactId: issue.contactId,
     replyText: checked.text,
   });
+  if (delivery.status !== 'sent') {
+    // The issue is resolved either way, so the chat goes back to the agent; followupSentAt
+    // stays empty so the Admin can see the message was not delivered and retry.
+    await prisma.chat
+      .update({ where: { id: issue.chatId }, data: { agentMode: 'AI_ACTIVE' } })
+      .catch(() => null);
+    return {
+      ok: false,
+      error: delivery.status === 'failed' ? delivery.error : `Pengiriman dibatalkan (${delivery.reason})`,
+    };
+  }
 
   await prisma.$transaction([
     prisma.supportIssue.update({

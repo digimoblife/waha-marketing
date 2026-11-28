@@ -1,5 +1,6 @@
 import { Type, type FunctionDeclaration } from '@google/genai';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { createLog } from '@/lib/logger';
 import { searchCaseMemory, searchKnowledgeBase } from './knowledge-indexer';
 import { fetchMerchantDiagnostic, fetchPlatformCatalog } from './lapaq-bridge';
@@ -125,21 +126,24 @@ export interface ToolExecutionContext {
   recentScreenshotUrls: string[];
 }
 
-async function generateNextIssueCode(): Promise<string> {
-  const latest = await prisma.supportIssue.findFirst({
-    orderBy: { createdAt: 'desc' },
-    select: { code: true },
-  });
+type IssueCreateData = Omit<Prisma.SupportIssueUncheckedCreateInput, 'code'>;
 
-  if (latest?.code) {
-    const match = latest.code.match(/ISS-(\d+)/);
-    if (match) {
-      const nextNum = Number(match[1]) + 1;
-      return `ISS-${String(nextNum).padStart(4, '0')}`;
-    }
-  }
-  const total = await prisma.supportIssue.count();
-  return `ISS-${String(total + 1).padStart(4, '0')}`;
+/**
+ * Creates a SupportIssue with the next sequential ISS-xxxx code. Concurrent escalations are
+ * serialized by a transaction-scoped Postgres advisory lock, so two chats can never compute
+ * the same code (previously most of a concurrent burst failed with P2002 and was lost).
+ */
+async function createIssueWithNextCode(data: IssueCreateData) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('support_issue_code'))`;
+    const rows = await tx.$queryRaw<Array<{ max: number | null }>>`
+      SELECT MAX(CAST(substring(code from '^ISS-([0-9]+)$') AS INTEGER)) AS max
+      FROM "SupportIssue"
+    `;
+    const nextNum = Number(rows[0]?.max ?? 0) + 1;
+    const code = `ISS-${String(nextNum).padStart(4, '0')}`;
+    return tx.supportIssue.create({ data: { ...data, code } });
+  });
 }
 
 /**
@@ -273,6 +277,9 @@ export async function executeAgentToolCall(
       const existingRecent = await prisma.supportIssue.findFirst({
         where: {
           chatId: ctx.chatId,
+          // Only merge into a ticket of the same kind: a refund must never be folded into
+          // (and overwrite the summary of) an open technical ticket, or vice versa.
+          category,
           status: { in: ['OPEN', 'IN_PROGRESS'] },
           createdAt: { gte: new Date(Date.now() - 10 * 60 * 1000) },
         },
@@ -303,23 +310,19 @@ export async function executeAgentToolCall(
         };
       }
 
-      const code = await generateNextIssueCode();
-      const created = await prisma.supportIssue.create({
-        data: {
-          code,
-          chatId: ctx.chatId,
-          contactId: ctx.contactId,
-          category,
-          title,
-          symptomSummary,
-          stepsTried,
-          screenshotUrls:
-            ctx.recentScreenshotUrls.length > 0
-              ? JSON.stringify(ctx.recentScreenshotUrls)
-              : null,
-          status: 'OPEN',
-          followupConsent,
-        },
+      const created = await createIssueWithNextCode({
+        chatId: ctx.chatId,
+        contactId: ctx.contactId,
+        category,
+        title,
+        symptomSummary,
+        stepsTried,
+        screenshotUrls:
+          ctx.recentScreenshotUrls.length > 0
+            ? JSON.stringify(ctx.recentScreenshotUrls)
+            : null,
+        status: 'OPEN',
+        followupConsent,
       });
 
       await prisma.chat.update({

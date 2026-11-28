@@ -210,8 +210,10 @@ export const waha = {
       replyTo?: string;
       session?: string;
       skipDelays?: boolean;
+      /** Checked after the typing delay; returning false cancels the send. */
+      beforeSend?: () => Promise<boolean>;
     }
-  ) {
+  ): Promise<any> {
     const session = options?.session || DEFAULT_SESSION;
     const skipDelays =
       options?.skipDelays ?? (process.env.NODE_ENV === 'test' || process.env.AGENT_SKIP_TYPING_DELAY === '1');
@@ -228,6 +230,9 @@ export const waha = {
     }
 
     await this.stopTyping(chatId, session);
+    if (options?.beforeSend && !(await options.beforeSend())) {
+      return { skipped: true };
+    }
     return await this.sendText(chatId, text, options?.replyTo, session);
   },
 
