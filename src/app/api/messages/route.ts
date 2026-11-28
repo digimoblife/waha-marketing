@@ -49,36 +49,17 @@ export async function GET(req: NextRequest) {
     });
     const rawMessages = newestMessages.reverse();
 
-    // Deduplicate messages on the fly:
-    // Two messages are duplicates if they share the same stanza ID or identical text/media within 10 seconds
+    // Hide copies of the same WhatsApp message stored under different ID formats
+    // (e.g. serialized vs bare stanza). Identity is the stanza ID only: two messages with
+    // identical text are still two messages. This read path never deletes rows.
     const dedupedMessages: typeof rawMessages = [];
     const seenStanzas = new Set<string>();
-    const seenContentBuckets = new Set<string>();
-    const duplicateIdsToDelete: string[] = [];
 
     for (const msg of rawMessages) {
       const stanza = extractStanzaId(msg.id);
-      const timeBucket = Math.floor(new Date(msg.timestamp).getTime() / 15000); // 15-second bucket
-      const contentKey = `${msg.chatId}_${msg.fromMe}_${(msg.body || '').trim()}_${timeBucket}`;
-
-      const isStanzaDuplicate = stanza ? seenStanzas.has(stanza) : false;
-      const isContentDuplicate = msg.body ? seenContentBuckets.has(contentKey) : false;
-
-      if (isStanzaDuplicate || isContentDuplicate) {
-        duplicateIdsToDelete.push(msg.id);
-        continue;
-      }
-
+      if (stanza && seenStanzas.has(stanza)) continue;
       if (stanza) seenStanzas.add(stanza);
-      if (msg.body) seenContentBuckets.add(contentKey);
       dedupedMessages.push(msg);
-    }
-
-    // Asynchronously delete duplicate copies from database so DB stays permanently clean
-    if (duplicateIdsToDelete.length > 0) {
-      prisma.message.deleteMany({
-        where: { id: { in: duplicateIdsToDelete } },
-      }).catch(() => null);
     }
 
     // Auto-heal any existing messages that still point to WAHA internal localhost:3000/api/files/

@@ -10,6 +10,7 @@ import MerchantInspector from '@/components/inbox/MerchantInspector';
 import ReminderModal from '@/components/inbox/ReminderModal';
 import NewChatModal from '@/components/NewChatModal';
 import ImportContactModal from '@/components/ImportContactModal';
+import { extractStanzaId } from '@/lib/msg-cache';
 
 function InboxWorkspaceInner() {
   const searchParams = useSearchParams();
@@ -310,10 +311,10 @@ function InboxWorkspaceInner() {
     }
 
     setMessages((prev) => {
-      const newStanza = (data.message.id || '').split('_').pop();
+      const newStanza = extractStanzaId(data.message.id || '');
       const exists = prev.some((m) => {
         if (m.id === data.message.id) return true;
-        const mStanza = (m.id || '').split('_').pop();
+        const mStanza = extractStanzaId(m.id || '');
         return newStanza && mStanza && newStanza === mStanza;
       });
       return exists ? prev : [...prev, data.message];

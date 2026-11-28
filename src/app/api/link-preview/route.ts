@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isBlockedHostname, safeFetchHtml } from '@/lib/safe-fetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,36 +16,6 @@ interface CachedPreview {
 
 const previewCache = new Map<string, CachedPreview>();
 const CACHE_TTL_MS = 30 * 60 * 1000;
-
-function isPrivateOrBlockedHost(hostname: string): boolean {
-  const h = hostname.toLowerCase();
-  if (
-    h === 'localhost' ||
-    h === '0.0.0.0' ||
-    h === '::1' ||
-    h.endsWith('.local') ||
-    h.endsWith('.internal') ||
-    h.endsWith('.localhost')
-  ) {
-    return true;
-  }
-  // Block private IPv4 ranges
-  const ipv4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (ipv4) {
-    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
-    if (
-      a === 10 ||
-      a === 127 ||
-      a === 0 ||
-      (a === 169 && b === 254) ||
-      (a === 192 && b === 168) ||
-      (a === 172 && b >= 16 && b <= 31)
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
 
 function decodeHtmlEntities(str: string): string {
   return str
@@ -87,7 +58,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unsupported protocol' }, { status: 400 });
     }
 
-    if (isPrivateOrBlockedHost(parsed.hostname)) {
+    if (isBlockedHostname(parsed.hostname)) {
       return NextResponse.json({ error: 'Blocked host' }, { status: 400 });
     }
 
@@ -105,37 +76,19 @@ export async function GET(req: NextRequest) {
       image: null as string | null,
     };
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
-
     try {
-      const res = await fetch(normalizedUrl, {
-        method: 'GET',
-        redirect: 'follow',
-        signal: controller.signal,
+      const res = await safeFetchHtml(normalizedUrl, {
+        timeoutMs: 3500,
+        maxBytes: 65536,
+        maxRedirects: 3,
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; LapaqBot/1.0; +https://lapaq.id)',
           Accept: 'text/html,application/xhtml+xml',
         },
       });
 
-      const contentType = res.headers.get('content-type') || '';
-      if (res.ok && contentType.includes('text/html')) {
-        // Read only first ~64KB to keep metadata parsing fast & lightweight
-        const reader = res.body?.getReader();
-        let html = '';
-        if (reader) {
-          const decoder = new TextDecoder();
-          while (html.length < 65536) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            html += decoder.decode(value, { stream: true });
-            if (html.includes('</head>')) break;
-          }
-          reader.cancel().catch(() => null);
-        } else {
-          html = (await res.text()).slice(0, 65536);
-        }
+      if (res.status >= 200 && res.status < 300 && res.contentType.includes('text/html')) {
+        const html = res.body;
 
         const title = extractMeta(html, [
           /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
@@ -159,7 +112,7 @@ export async function GET(req: NextRequest) {
 
         if (image) {
           try {
-            image = new URL(image, normalizedUrl).toString();
+            image = new URL(image, res.finalUrl).toString();
           } catch {
             image = null;
           }
@@ -170,9 +123,7 @@ export async function GET(req: NextRequest) {
         fallback.image = image;
       }
     } catch {
-      // Fall back gracefully to hostname card
-    } finally {
-      clearTimeout(timer);
+      // Blocked, unreachable, or timed out: fall back gracefully to the hostname card
     }
 
     if (previewCache.size > 200) {

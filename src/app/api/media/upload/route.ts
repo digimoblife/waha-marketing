@@ -4,6 +4,18 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
+// Matches nginx client_max_body_size.
+const MAX_UPLOAD_BYTES = 64 * 1024 * 1024;
+
+// Allowlist of attachment types that WhatsApp can deliver. Script-capable formats
+// (SVG, HTML, XML, JS) are rejected because uploads are served from this origin.
+const ALLOWED_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic',
+  '.mp4', '.m4v', '.mov', '.webm',
+  '.mp3', '.m4a', '.aac', '.ogg', '.opus', '.wav',
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.csv', '.txt', '.zip',
+]);
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -11,6 +23,19 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: 'Tidak ada file yang diunggah' }, { status: 400 });
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ error: 'Ukuran file maksimal 64 MB' }, { status: 413 });
+    }
+
+    const originalExt = path.extname(file.name).toLowerCase();
+    const isBlockedMime = /svg|html|xml|javascript/i.test(file.type || '');
+    if ((originalExt && !ALLOWED_EXTENSIONS.has(originalExt)) || isBlockedMime) {
+      return NextResponse.json(
+        { error: 'Tipe file tidak didukung. Gunakan gambar, video, audio, PDF, atau dokumen Office.' },
+        { status: 415 }
+      );
     }
 
     const bytes = await file.arrayBuffer();
@@ -28,8 +53,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate safe filename with timestamp
-    const ext = path.extname(file.name) || (mediaType === 'image' ? '.jpg' : mediaType === 'video' ? '.mp4' : '');
-    const safeBase = path.basename(file.name, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const ext = originalExt || (mediaType === 'image' ? '.jpg' : mediaType === 'video' ? '.mp4' : '');
+    const safeBase = path.basename(file.name, path.extname(file.name)).replace(/[^a-zA-Z0-9_-]/g, '_');
     const uniqueFilename = `${Date.now()}_${safeBase}${ext}`;
 
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');

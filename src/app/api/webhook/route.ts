@@ -188,6 +188,7 @@ export async function POST(req: NextRequest) {
             ...(safeStanza ? [
               { id: safeStanza },
               { id: { endsWith: safeStanza } },
+              { id: { contains: `_${safeStanza}_` } }, // group IDs end with the participant JID
               { id: `true_${chatId}_${safeStanza}` },
               { id: `false_${chatId}_${safeStanza}` },
             ] : []),
@@ -199,8 +200,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, ignored: 'already_exists_in_db' });
       }
 
-      // Outgoing message deduplication: If sent from our web UI in the last 15 seconds, avoid double-entry
+      // Outgoing echo deduplication: only rows saved under a local fallback ID (no WhatsApp
+      // stanza known) can be matched by content. Rows with a real stanza were already caught
+      // above, and matching them by text would drop genuine repeated messages.
       if (fromMe) {
+        const fallbackIdFilter = {
+          OR: [
+            { id: { startsWith: 'out_' } },
+            { id: { startsWith: 'ai_' } },
+            { id: { startsWith: 'bc_' } },
+          ],
+        };
         const recentDuplicate = text
           ? await prisma.message.findFirst({
               where: {
@@ -208,6 +218,7 @@ export async function POST(req: NextRequest) {
                 fromMe: true,
                 body: text,
                 timestamp: { gte: new Date(Date.now() - 15000) },
+                ...fallbackIdFilter,
               },
             })
           : mediaType !== 'text'
@@ -217,6 +228,7 @@ export async function POST(req: NextRequest) {
                 fromMe: true,
                 mediaType,
                 timestamp: { gte: new Date(Date.now() - 15000) },
+                ...fallbackIdFilter,
               },
             })
           : null;
@@ -511,6 +523,7 @@ export async function POST(req: NextRequest) {
               ...(stanza ? [
                 { id: stanza },
                 { id: { endsWith: stanza } },
+                { id: { contains: `_${stanza}_` } }, // group IDs end with the participant JID
               ] : []),
             ],
           },

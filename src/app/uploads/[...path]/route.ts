@@ -31,6 +31,35 @@ const MIME_TYPES: Record<string, string> = {
   '.csv': 'text/csv',
 };
 
+// Only these types are rendered inline. Everything else (SVG, HTML, XML, unknown) is forced
+// to download inside a sandbox so user-supplied files can never run script on this origin.
+const INLINE_SAFE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/aac',
+  'audio/ogg',
+  'audio/wav',
+  'application/pdf',
+]);
+
+function safetyHeaders(contentType: string, fileName: string): Record<string, string> {
+  const headers: Record<string, string> = { 'X-Content-Type-Options': 'nosniff' };
+  if (!INLINE_SAFE_TYPES.has(contentType)) {
+    const asciiName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    headers['Content-Disposition'] = `attachment; filename="${asciiName}"`;
+    headers['Content-Security-Policy'] = "default-src 'none'; sandbox";
+  }
+  return headers;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { path: string[] } }
@@ -45,6 +74,7 @@ export async function GET(
     const fileSize = stat.size;
     const ext = path.extname(safePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const extraHeaders = safetyHeaders(contentType, path.basename(safePath));
 
     const rangeHeader = req.headers.get('range');
     if (rangeHeader) {
@@ -72,6 +102,7 @@ export async function GET(
             'Accept-Ranges': 'bytes',
             'Content-Length': chunkSize.toString(),
             'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+            ...extraHeaders,
           },
         });
       }
@@ -87,6 +118,7 @@ export async function GET(
         'Content-Length': fileSize.toString(),
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        ...extraHeaders,
       },
     });
   } catch {

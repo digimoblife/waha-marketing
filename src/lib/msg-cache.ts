@@ -6,12 +6,16 @@
 
 const processedMsgIds = new Set<string>();
 
+// Serialized WhatsApp IDs: `<fromMe>_<chatJid>_<STANZA>` and, for groups,
+// `<fromMe>_<groupJid>_<STANZA>_<participantJid>`. JIDs never contain underscores.
+// The stanza is everything after the chat JID, minus a trailing participant JID if present.
+const SERIALIZED_MSG_ID = /^(?:true|false)_[^_]+@[^_]+_(.+?)(?:_[^_]+@[^_]+)?$/;
+
 export function extractStanzaId(msgId: string): string {
   if (!msgId) return '';
-  if (msgId.includes('_')) {
-    const parts = msgId.split('_');
-    return parts[parts.length - 1] || msgId;
-  }
+  const serialized = SERIALIZED_MSG_ID.exec(msgId);
+  if (serialized) return serialized[1];
+  // Bare stanza IDs and local fallback IDs (out_*, ai_*, bc_*) are their own identity.
   return msgId;
 }
 
