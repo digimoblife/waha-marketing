@@ -121,6 +121,14 @@ test('T-03: SVG/HTML uploads are rejected and unknown files are served as sandbo
   assert.equal((await upload('x.html', 'text/html', '<script>alert(1)</script>')).status, 415);
   assert.equal((await upload('x.png', 'image/svg+xml', '<svg/>')).status, 415);
   assert.equal((await upload('foto.JPG', 'image/jpeg', 'jpg-bytes')).status, 200);
+  // Office formats carry "xml" inside their MIME type and must still be accepted.
+  for (const [name, type] of [
+    ['data.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+    ['surat.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    ['slide.pptx', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+  ]) {
+    assert.equal((await upload(name, type, 'PK')).status, 200, name);
+  }
 
   // A file that reached /uploads another way (e.g. WAHA media download) must not render inline.
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
@@ -137,7 +145,9 @@ test('T-03: SVG/HTML uploads are rejected and unknown files are served as sandbo
   } finally {
     await fs.rm(path.join(uploadsDir, svgName), { force: true });
     for (const f of await fs.readdir(uploadsDir)) {
-      if (/^\d+_foto\.jpg$/i.test(f)) await fs.rm(path.join(uploadsDir, f), { force: true });
+      if (/^\d+_(foto\.jpg|data\.xlsx|surat\.docx|slide\.pptx)$/i.test(f)) {
+        await fs.rm(path.join(uploadsDir, f), { force: true });
+      }
     }
   }
 });
@@ -168,4 +178,35 @@ test('T-05: session status route requires the server key and reports deactivated
   assert.equal((await call('wrong-key')).status, 404);
   const body = await (await call(getSessionCheckKey())).json();
   assert.deepEqual(body, { active: false, role: 'OPERATOR' });
+});
+
+test('T-05: middleware locks out a disabled user but lets them back in right after reactivation', async () => {
+  const { middleware } = await import('../src/middleware.ts');
+  const { signAuthToken, AUTH_COOKIE_NAME } = await import('../src/lib/auth-token.ts');
+  const token = await signAuthToken({ id: 'user_reactivate', username: 'op', name: 'Op', role: 'OPERATOR' });
+
+  let active = false;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: any, init?: any) => {
+    const url = typeof input === 'string' ? input : input?.url || String(input);
+    if (url.includes('/api/auth/session-status')) {
+      return new Response(JSON.stringify({ active, role: 'OPERATOR' }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return realFetch(input, init);
+  }) as typeof fetch;
+
+  const call = () =>
+    middleware(
+      new NextRequest('http://localhost/api/chats', { headers: { cookie: `${AUTH_COOKIE_NAME}=${token}` } })
+    );
+  try {
+    assert.equal((await call()).status, 401);
+    active = true; // Admin reactivates the account
+    const res = await call();
+    assert.notEqual(res.status, 401);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

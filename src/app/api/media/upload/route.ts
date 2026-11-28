@@ -9,6 +9,17 @@ const MAX_UPLOAD_BYTES = 64 * 1024 * 1024;
 
 // Allowlist of attachment types that WhatsApp can deliver. Script-capable formats
 // (SVG, HTML, XML, JS) are rejected because uploads are served from this origin.
+const BLOCKED_MIME_TYPES = new Set([
+  'image/svg+xml',
+  'text/html',
+  'application/xhtml+xml',
+  'text/xml',
+  'application/xml',
+  'text/javascript',
+  'application/javascript',
+  'application/x-javascript',
+]);
+
 const ALLOWED_EXTENSIONS = new Set([
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic',
   '.mp4', '.m4v', '.mov', '.webm',
@@ -30,7 +41,10 @@ export async function POST(req: NextRequest) {
     }
 
     const originalExt = path.extname(file.name).toLowerCase();
-    const isBlockedMime = /svg|html|xml|javascript/i.test(file.type || '');
+    // Exact script-capable types only: a substring test like /xml/ would also reject Office
+    // files (application/vnd.openxmlformats-officedocument.*).
+    const mimeBase = (file.type || '').split(';')[0].trim().toLowerCase();
+    const isBlockedMime = BLOCKED_MIME_TYPES.has(mimeBase);
     if ((originalExt && !ALLOWED_EXTENSIONS.has(originalExt)) || isBlockedMime) {
       return NextResponse.json(
         { error: 'Tipe file tidak didukung. Gunakan gambar, video, audio, PDF, atau dokumen Office.' },

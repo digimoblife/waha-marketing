@@ -37,7 +37,13 @@ async function getSessionStatus(req: NextRequest, userId: string): Promise<Sessi
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const value = (await res.json()) as SessionStatus;
     if (sessionStatusCache.size > 1000) sessionStatusCache.clear();
-    sessionStatusCache.set(userId, { value, expiresAt: Date.now() + SESSION_STATUS_TTL_MS });
+    if (value.active) {
+      sessionStatusCache.set(userId, { value, expiresAt: Date.now() + SESSION_STATUS_TTL_MS });
+    } else {
+      // Never cache a rejection: a disabled user's cookie is deleted on the first 401 anyway,
+      // and caching it would log the user out again right after an Admin reactivates them.
+      sessionStatusCache.delete(userId);
+    }
     return value;
   } catch (err) {
     // Database/route unreachable: fall back to the last known answer, else the signed token,
