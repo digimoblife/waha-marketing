@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Bot,
   UserCheck,
+  AlertCircle,
 } from 'lucide-react';
 import { formatDisplayPhone } from '@/lib/phone';
 import { interpolateTemplate } from '@/lib/template-utils';
@@ -146,7 +147,7 @@ export default function InboxChatPanel({
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [quickReplyOpen, setQuickReplyOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [failedMedia, setFailedMedia] = useState<Record<string, boolean>>({});
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
@@ -647,63 +648,117 @@ export default function InboxChatPanel({
                       )}
 
                       {/* Media Render */}
-                      {m.mediaUrl && m.mediaType === 'image' && (
-                        failedImages[m.id] ? (
-                          <div
-                            className={`mb-1.5 px-3 py-2 rounded-md border text-xs ${
+                      {(() => {
+                        const hasMediaType = m.mediaType && m.mediaType !== 'text';
+                        if (!hasMediaType) return null;
+                        const placeholderCls = `mb-1.5 px-3 py-2 rounded-md border text-xs ${
+                          m.fromMe
+                            ? 'bg-white/10 border-white/20 text-white/80'
+                            : 'bg-[#F4F8FA] border-[#D1DEE5] text-[#5C7685]'
+                        }`;
+                        const label =
+                          m.mediaType === 'image'
+                            ? 'Gambar'
+                            : m.mediaType === 'video'
+                            ? 'Video'
+                            : m.mediaType === 'audio'
+                            ? 'Audio'
+                            : 'Dokumen';
+
+                        // No reachable file: WAHA download failed or the temporary file expired
+                        if (!m.mediaUrl) {
+                          return (
+                            <div className={placeholderCls}>
+                              {label} tidak tersedia / kedaluwarsa
+                              {m.fileName ? ` (${m.fileName})` : ''}
+                            </div>
+                          );
+                        }
+
+                        if (failedMedia[m.id]) {
+                          return (
+                            <div className={placeholderCls}>
+                              {m.mediaType === 'image' ? (
+                                <span>{label} tidak tersedia / kedaluwarsa</span>
+                              ) : (
+                                <span>
+                                  {label} tidak bisa diputar di browser ini.{' '}
+                                  <a
+                                    href={m.mediaUrl}
+                                    download={m.fileName || true}
+                                    className="underline font-semibold"
+                                  >
+                                    Unduh
+                                  </a>
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        const markFailed = () =>
+                          setFailedMedia((prev) => ({ ...prev, [m.id]: true }));
+
+                        if (m.mediaType === 'image') {
+                          return (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={m.mediaUrl}
+                              alt={m.fileName || 'Gambar'}
+                              loading="lazy"
+                              onClick={() => setLightboxUrl(m.mediaUrl)}
+                              onError={markFailed}
+                              className="w-[240px] max-w-full max-h-[280px] object-cover rounded-md mb-1.5 cursor-zoom-in border border-black/10 block bg-black/5"
+                            />
+                          );
+                        }
+
+                        if (m.mediaType === 'video') {
+                          return (
+                            <video
+                              src={m.mediaUrl}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              onError={markFailed}
+                              className="w-[280px] max-w-full max-h-[300px] rounded-md mb-1.5 bg-black block"
+                            />
+                          );
+                        }
+
+                        if (m.mediaType === 'audio') {
+                          return (
+                            <audio
+                              src={m.mediaUrl}
+                              controls
+                              onError={markFailed}
+                              className="max-w-full mb-1.5"
+                            />
+                          );
+                        }
+
+                        return (
+                          <a
+                            href={m.mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={`flex items-center gap-2.5 p-2 rounded-md mb-1.5 border ${
                               m.fromMe
-                                ? 'bg-white/10 border-white/20 text-white/80'
-                                : 'bg-[#F4F8FA] border-[#D1DEE5] text-[#5C7685]'
+                                ? 'bg-white/10 border-white/20 text-white hover:bg-white/15'
+                                : 'bg-[#F4F8FA] border-[#D1DEE5] text-[#0F232E] hover:bg-[#E8EFF3]'
                             }`}
                           >
-                            Gambar tidak tersedia / kedaluwarsa
-                          </div>
-                        ) : (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={m.mediaUrl}
-                            alt={m.fileName || 'Gambar'}
-                            loading="lazy"
-                            onClick={() => setLightboxUrl(m.mediaUrl)}
-                            onError={() =>
-                              setFailedImages((prev) => ({ ...prev, [m.id]: true }))
-                            }
-                            className="w-[240px] max-w-full max-h-[280px] object-cover rounded-md mb-1.5 cursor-zoom-in border border-black/10 block bg-black/5"
-                          />
-                        )
-                      )}
+                            <FileText className="w-4 h-4 shrink-0" />
+                            <span className="text-xs font-semibold truncate flex-1">
+                              {m.fileName || 'Dokumen'}
+                            </span>
+                            <Download className="w-3.5 h-3.5 shrink-0 opacity-75" />
+                          </a>
+                        );
+                      })()}
 
-                      {m.mediaUrl && m.mediaType === 'video' && (
-                        <video
-                          src={m.mediaUrl}
-                          controls
-                          playsInline
-                          preload="metadata"
-                          className="w-[280px] max-w-full max-h-[300px] rounded-md mb-1.5 bg-black block"
-                        />
-                      )}
-
-                      {m.mediaUrl && m.mediaType === 'audio' && (
-                        <audio src={m.mediaUrl} controls className="max-w-full mb-1.5" />
-                      )}
-
-                      {m.mediaUrl && m.mediaType === 'document' && (
-                        <a
-                          href={m.mediaUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={`flex items-center gap-2.5 p-2 rounded-md mb-1.5 border ${
-                            m.fromMe
-                              ? 'bg-white/10 border-white/20 text-white hover:bg-white/15'
-                              : 'bg-[#F4F8FA] border-[#D1DEE5] text-[#0F232E] hover:bg-[#E8EFF3]'
-                          }`}
-                        >
-                          <FileText className="w-4 h-4 shrink-0" />
-                          <span className="text-xs font-semibold truncate flex-1">
-                            {m.fileName || 'Dokumen'}
-                          </span>
-                          <Download className="w-3.5 h-3.5 shrink-0 opacity-75" />
-                        </a>
+                      {!m.body && (!m.mediaType || m.mediaType === 'text') && (
+                        <span className="italic opacity-75">[Jenis pesan ini belum didukung]</span>
                       )}
 
                       {m.body && <span>{renderMessageBody(m.body, Boolean(m.fromMe))}</span>}
@@ -745,7 +800,15 @@ export default function InboxChatPanel({
                     </span>
                     {m.fromMe && (
                       <span>
-                        {m.ackStatus >= 3 ? (
+                        {m.ackStatus < 0 ? (
+                          <span
+                            title="Gagal terkirim ke WhatsApp"
+                            className="inline-flex items-center gap-0.5 text-[#9E1F23] font-semibold"
+                          >
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Gagal
+                          </span>
+                        ) : m.ackStatus >= 3 ? (
                           <CheckCheck className="w-3.5 h-3.5 text-[#00688E]" />
                         ) : m.ackStatus === 2 ? (
                           <CheckCheck className="w-3.5 h-3.5 text-[#809AA8]" />

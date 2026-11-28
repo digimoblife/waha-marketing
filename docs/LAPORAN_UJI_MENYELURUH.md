@@ -61,6 +61,8 @@ Penyebab: middleware hanya memverifikasi tanda tangan JWT, tanpa cek `isActive`/
 
 ## Bug berdampak sedang
 
+> **Status:** S-01 s.d. S-08 **sudah diperbaiki** (tes regresi di `tests/media-ack-broadcast-fixes.test.ts`, diverifikasi di UI dan dengan restart server). S-09 masih menunggu uji dengan WAHA asli.
+
 | ID | Temuan | Bukti / lokasi |
 | --- | --- | --- |
 | S-01 | **Preview media rusak saat file WAHA kedaluwarsa.** URL tetap `http://localhost:3000/api/files/…`, jadi link dokumen mengarah ke localhost di browser operator. Video/audio tidak punya fallback. Endpoint baca juga mencoba mengunduh ulang setiap polling 3 detik tanpa timeout. | Terkonfirmasi di UI. [messages/route.ts:86](../src/app/api/messages/route.ts#L86), [waha-media.ts:111](../src/lib/waha-media.ts#L111) |

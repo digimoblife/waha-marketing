@@ -206,10 +206,14 @@ function BroadcastPageInner() {
 
       const nextManual: ManualRecipient[] = [];
       const nextSelected = new Set<string>();
+      // The same number can appear for several stores; keep one entry per phone so the
+      // candidate list never renders two rows with the same `manual_<phone>` id.
+      const seenPhones = new Set<string>();
 
       for (const m of list) {
         const clean = sanitizePhone(m.phone);
-        if (!clean) continue;
+        if (!clean || seenPhones.has(clean)) continue;
+        seenPhones.add(clean);
         const existing = contacts.find((c) => sanitizePhone(c.phone) === clean);
         if (existing) {
           nextSelected.add(existing.id);

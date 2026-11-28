@@ -83,7 +83,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ messages: dedupedMessages });
+    // A WAHA-internal URL that could not be downloaded is only reachable from the server
+    // (e.g. http://localhost:3000/api/files/...). Never hand it to the browser: the UI shows
+    // an "expired media" placeholder instead of a broken image or a dead link.
+    const responseMessages = dedupedMessages.map((msg) =>
+      msg.mediaUrl && isWahaInternalMediaUrl(msg.mediaUrl)
+        ? { ...msg, mediaUrl: null, mediaUnavailable: true }
+        : msg
+    );
+
+    return NextResponse.json({ messages: responseMessages });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

@@ -66,6 +66,52 @@ export function isWahaInternalMediaUrl(url?: string | null): boolean {
 
 // Cache permanently expired (404/410) WAHA temporary file URLs so polling never retries them endlessly
 const permanentlyFailedWahaUrls = new Set<string>();
+// Transient failures (timeout, WAHA down, 5xx) are retried at most once per minute instead of
+// on every 3-second inbox poll.
+const transientFailureRetryAt = new Map<string, number>();
+const TRANSIENT_RETRY_MS = 60_000;
+const DOWNLOAD_TIMEOUT_MS = 15_000;
+
+function markTransientFailure(url: string) {
+  if (transientFailureRetryAt.size > 2000) transientFailureRetryAt.clear();
+  transientFailureRetryAt.set(url, Date.now() + TRANSIENT_RETRY_MS);
+}
+
+/**
+ * Human-readable body for WhatsApp messages that carry neither text nor a file
+ * (location, contact card, poll), so they do not render as empty bubbles.
+ */
+export function describeNonMediaMessage(data: any): string | null {
+  const msg = data?._data?.message || {};
+
+  const loc = data?.location || msg.locationMessage || msg.liveLocationMessage;
+  if (loc) {
+    const lat = loc.latitude ?? loc.degreesLatitude;
+    const lng = loc.longitude ?? loc.degreesLongitude;
+    const label = [loc.name, loc.description, loc.address].filter(Boolean)[0];
+    if (typeof lat === 'number' && typeof lng === 'number') {
+      return `📍 Lokasi${label ? `: ${label}` : ''}\nhttps://maps.google.com/?q=${lat},${lng}`;
+    }
+    return `📍 Lokasi${label ? `: ${label}` : ''}`;
+  }
+
+  const contact = msg.contactMessage || msg.contactsArrayMessage;
+  if (contact || (Array.isArray(data?.vCards) && data.vCards.length > 0)) {
+    const name =
+      contact?.displayName ||
+      contact?.contacts?.map((c: any) => c.displayName).filter(Boolean).join(', ') ||
+      (Array.isArray(data?.vCards) ? String(data.vCards[0]).match(/FN:(.+)/)?.[1]?.trim() : '') ||
+      '';
+    return `👤 Kontak${name ? `: ${name}` : ''}`;
+  }
+
+  const poll = msg.pollCreationMessage || msg.pollCreationMessageV2 || msg.pollCreationMessageV3 || data?.poll;
+  if (poll) {
+    return `📊 Polling${poll.name ? `: ${poll.name}` : ''}`;
+  }
+
+  return null;
+}
 
 /**
  * Downloads a media file from WAHA's internal /api/files endpoint
@@ -75,6 +121,8 @@ export async function downloadWahaMedia(rawUrl: string): Promise<string | null> 
   if (!rawUrl) return null;
   if (rawUrl.startsWith('/uploads/')) return rawUrl;
   if (permanentlyFailedWahaUrls.has(rawUrl)) return null;
+  const retryAt = transientFailureRetryAt.get(rawUrl);
+  if (retryAt && retryAt > Date.now()) return null;
 
   try {
     let fetchUrl = rawUrl.trim();
@@ -108,10 +156,12 @@ export async function downloadWahaMedia(rawUrl: string): Promise<string | null> 
       headers['x-api-key'] = WAHA_KEY;
     }
 
-    const res = await fetch(fetchUrl, { headers });
+    const res = await fetch(fetchUrl, { headers, signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
     if (!res.ok) {
       if (res.status === 404 || res.status === 410) {
         permanentlyFailedWahaUrls.add(rawUrl);
+      } else {
+        markTransientFailure(rawUrl);
       }
       console.warn(`[WAHA Media] Failed to download ${fetchUrl}: HTTP ${res.status}`);
       return null;
@@ -119,8 +169,10 @@ export async function downloadWahaMedia(rawUrl: string): Promise<string | null> 
 
     const arrayBuf = await res.arrayBuffer();
     await fs.writeFile(destPath, Buffer.from(arrayBuf));
+    transientFailureRetryAt.delete(rawUrl);
     return `/uploads/${safeName}`;
   } catch (err) {
+    markTransientFailure(rawUrl);
     console.error('[WAHA Media] Error downloading media:', err);
     return null;
   }

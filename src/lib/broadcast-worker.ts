@@ -44,6 +44,32 @@ export async function getSentTodayCount(): Promise<number> {
 }
 
 /**
+ * Restarts workers for campaigns still marked RUNNING. The worker lives in process memory, so
+ * after a restart or redeploy those campaigns would otherwise stay RUNNING forever with
+ * QUEUED recipients. Safe to call repeatedly: active campaigns are skipped.
+ */
+export async function resumeRunningBroadcasts(): Promise<string[]> {
+  const running = await prisma.broadcastCampaign.findMany({
+    where: { status: 'RUNNING' },
+    select: { id: true, name: true },
+  });
+  const activeSet = globalForWorker.activeBroadcastCampaigns!;
+  const resumed: string[] = [];
+  for (const campaign of running) {
+    if (activeSet.has(campaign.id)) continue;
+    triggerBroadcastWorker(campaign.id);
+    resumed.push(campaign.id);
+    await createLog(
+      'BROADCAST',
+      'WARNING',
+      `Campaign "${campaign.name}" dilanjutkan otomatis setelah server dimulai ulang`,
+      { campaignId: campaign.id }
+    );
+  }
+  return resumed;
+}
+
+/**
  * Fire-and-forget campaign runner with DB-backed pause/cancel, daily guardrail, and circuit breaker.
  */
 export function triggerBroadcastWorker(campaignId: string) {
@@ -136,6 +162,15 @@ async function runBroadcastLoop(campaignId: string) {
           })
         : undefined;
 
+      // A chat an operator has taken over (or that waits on the technical team) keeps its
+      // mode: a campaign must not silently switch the AI back on for that merchant.
+      const existingChat = await prisma.chat.findUnique({
+        where: { id: nextRecipient.jid },
+        select: { agentMode: true },
+      });
+      const keepCurrentMode =
+        existingChat?.agentMode === 'HUMAN_TAKEOVER' || existingChat?.agentMode === 'WAITING_TECH';
+
       // Ensure Chat exists and store Message so history appears in Inbox
       await prisma.chat.upsert({
         where: { id: nextRecipient.jid },
@@ -153,7 +188,10 @@ async function runBroadcastLoop(campaignId: string) {
           lastMessage: personalizedText,
           lastMessageAt: timestamp,
           ...(campaign.enableAiFollowup
-            ? { agentMode: 'AI_ACTIVE', campaignContext: campaignCtxPayload }
+            ? {
+                campaignContext: campaignCtxPayload,
+                ...(keepCurrentMode ? {} : { agentMode: 'AI_ACTIVE' }),
+              }
             : {}),
         },
       });

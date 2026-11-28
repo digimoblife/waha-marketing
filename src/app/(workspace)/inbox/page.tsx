@@ -11,6 +11,7 @@ import ReminderModal from '@/components/inbox/ReminderModal';
 import NewChatModal from '@/components/NewChatModal';
 import ImportContactModal from '@/components/ImportContactModal';
 import { extractStanzaId } from '@/lib/msg-cache';
+import { sanitizePhone } from '@/lib/phone';
 
 function InboxWorkspaceInner() {
   const searchParams = useSearchParams();
@@ -212,9 +213,9 @@ function InboxWorkspaceInner() {
     if (jidParam) {
       handleSelectChat(jidParam);
     } else if (phoneParam) {
-      const clean = phoneParam.replace(/[^0-9]/g, '');
-      const targetJid = clean.endsWith('@c.us') ? clean : `${clean}@c.us`;
-      handleSelectChat(targetJid);
+      // Normalize local formats (0812..., +62 812-...) to the canonical 62... JID
+      const clean = sanitizePhone(phoneParam.replace(/@.+$/, ''));
+      if (clean) handleSelectChat(`${clean}@c.us`);
     }
   }, [jidParam, phoneParam, handleSelectChat]);
 

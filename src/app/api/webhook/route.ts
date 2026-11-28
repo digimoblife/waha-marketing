@@ -4,7 +4,12 @@ import { sanitizePhone, isLid, normalizeJid, jidToPhone } from '@/lib/phone';
 import { resolveLidToPhone } from '@/lib/lid';
 import { createLog } from '@/lib/logger';
 import { isMessageProcessed, markMessageProcessed, extractStanzaId } from '@/lib/msg-cache';
-import { detectMediaType, downloadWahaMedia, isWahaInternalMediaUrl } from '@/lib/waha-media';
+import {
+  describeNonMediaMessage,
+  detectMediaType,
+  downloadWahaMedia,
+  isWahaInternalMediaUrl,
+} from '@/lib/waha-media';
 import { getWorkspaceSettings, isOutsideWorkingHours } from '@/lib/settings';
 import { waha } from '@/lib/waha';
 import { evaluateBotGate } from '@/lib/agent/security-guard';
@@ -172,12 +177,16 @@ export async function POST(req: NextRequest) {
         }).catch(() => null);
       }
 
-      const text = data.body || (data._data && data._data.body) || '';
+      let text: string = data.body || (data._data && data._data.body) || '';
 
       // Media detection & local persistence (needed early for captionless media dedup)
       const rawMediaUrl = data.mediaUrl || data._data?.mediaUrl || data.media?.url || null;
       const fileName = data.filename || data._data?.filename || data.media?.filename || null;
       const mediaType = detectMediaType(data, rawMediaUrl, fileName);
+      if (!text && mediaType === 'text') {
+        // Location / contact card / poll: store a readable body instead of an empty bubble
+        text = describeNonMediaMessage(data) || '';
+      }
 
       // Database check: verify if message already exists by msgId OR stanzaId OR serializedId
       const safeStanza = stanzaId && stanzaId.length >= 8 ? stanzaId : '';
@@ -526,6 +535,9 @@ export async function POST(req: NextRequest) {
                 { id: { contains: `_${stanza}_` } }, // group IDs end with the participant JID
               ] : []),
             ],
+            // ACK events can arrive out of order (read before delivered). Status only moves
+            // forward; an ERROR (-1) is recorded only while the message was not yet delivered.
+            ackStatus: ack < 0 ? { lt: 2 } : { lt: ack },
           },
           data: { ackStatus: ack },
         });
